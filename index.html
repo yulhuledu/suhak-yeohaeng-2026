@@ -166,11 +166,12 @@
 
         <div class="form-group">
           <label>학급 선택</label>
-          <select id="studentClassSelect" onchange="updateStudentNameDropdown()">
+          <select id="studentClassSelect" onchange="onStudentClassChange()">
             <option value="">-- 반을 선택하세요 --</option>
             <option value="1반">1반</option><option value="2반">2반</option><option value="3반">3반</option><option value="4반">4반</option><option value="5반">5반</option>
             <option value="6반">6반</option><option value="7반">7반</option><option value="8반">8반</option><option value="9반">9반</option><option value="10반">10반</option>
           </select>
+          <div id="studentGroupInfo" style="display:none; margin-top:6px; font-size:0.82rem; font-weight:700; color:var(--primary);"></div>
         </div>
 
         <div class="form-group">
@@ -191,9 +192,12 @@
         <button class="sub-nav-btn" onclick="switchAssemblySub('student')">학생 직접 체크인</button>
       </div>
 
+      <!-- 조 필터 (조편성 시트에 데이터가 있을 때만 표시) -->
+      <div class="class-scroll" id="groupFilterChips" style="display:none;"></div>
+
       <!-- 제어 패널 -->
       <div class="control-panel">
-        <select class="control-select" id="teacherEventTypeSelect">
+        <select class="control-select" id="teacherEventTypeSelect" onchange="syncAssemblyStatus()">
           <option value="🚌 버스 탑승">🚌 버스 탑승</option>
           <option value="📍 장소/체험지 집결">📍 장소/체험지 집결</option>
           <option value="🍽️ 식당 도착">🍽️ 식당 도착</option>
@@ -329,6 +333,30 @@
     let currentTab = 'tab-assembly-student';
     let targetTabAfterAuth = '';
 
+    // 반-조 매핑 + 조별 코스 순서 (구글 시트 '조편성'/'코스순서' 탭에서 로드)
+    let courseConfig = { classToGroup: {}, groupCourses: {} };
+    let currentGroupFilter = '전체';
+
+    const DEFAULT_EVENT_TYPES = ['🚌 버스 탑승', '📍 장소/체험지 집결', '🍽️ 식당 도착', '🛏️ 숙소 도착', '🚶 버스 하차'];
+
+    // 기본 상태 목록 + 코스명 목록을 합쳐서 <option> HTML 생성 (중복 제거)
+    function buildEventTypeOptionsHtml(extraCourses) {
+      const all = DEFAULT_EVENT_TYPES.slice();
+      (extraCourses || []).forEach(function(name) {
+        if (all.indexOf(name) === -1) all.push(name);
+      });
+      return all.map(function(v) { return `<option value="${v}">${v}</option>`; }).join('');
+    }
+
+    // 조편성에 등록된 모든 조의 코스명을 중복 없이 합친 목록 (선생님 화면용)
+    function getAllCourseNames() {
+      const set = new Set();
+      Object.keys(courseConfig.groupCourses || {}).forEach(function(g) {
+        (courseConfig.groupCourses[g] || []).forEach(function(c) { set.add(c); });
+      });
+      return Array.from(set);
+    }
+
     let html5QrCode = null;
     let isScanning = false;
     let lastScannedData = '';
@@ -369,6 +397,16 @@
       }).catch(function(err) {
         console.error('학생 명단 로드 실패:', err);
       });
+
+      callApi('getCourseConfig').then(function(res) {
+        courseConfig = { classToGroup: res.classToGroup || {}, groupCourses: res.groupCourses || {} };
+        // 선생님 쪽 구분 드롭다운에도 모든 코스명을 반영
+        const teacherSel = document.getElementById('teacherEventTypeSelect');
+        if (teacherSel) teacherSel.innerHTML = buildEventTypeOptionsHtml(getAllCourseNames());
+        renderGroupChips();
+      }).catch(function(err) {
+        console.error('조/코스 설정 로드 실패:', err);
+      });
     };
 
     function updateStudentNameDropdown() {
@@ -383,6 +421,49 @@
         filtered.map(s => `<option value="${s.name}" data-num="${s.num}">${s.num}번 ${s.name}</option>`).join('');
     }
 
+    // 학급 선택이 바뀔 때: 이름 목록 갱신 + 소속 조 표시 + 그 조의 코스 순서로 "현재 상태" 드롭다운 재구성
+    function onStudentClassChange() {
+      updateStudentNameDropdown();
+
+      const cls = document.getElementById('studentClassSelect').value;
+      const groupInfoEl = document.getElementById('studentGroupInfo');
+      const evSelect = document.getElementById('studentEventTypeSelect');
+      const group = courseConfig.classToGroup[cls];
+
+      if (group) {
+        groupInfoEl.style.display = 'block';
+        groupInfoEl.innerText = `👥 소속 조: ${group}`;
+        evSelect.innerHTML = buildEventTypeOptionsHtml(courseConfig.groupCourses[group] || []);
+      } else {
+        groupInfoEl.style.display = 'none';
+        evSelect.innerHTML = buildEventTypeOptionsHtml([]);
+      }
+    }
+
+    // 조 필터 칩 렌더링 (조편성 시트에 데이터가 있을 때만 표시)
+    function renderGroupChips() {
+      const container = document.getElementById('groupFilterChips');
+      if (!container) return;
+      const groups = Array.from(new Set(Object.values(courseConfig.classToGroup || {})));
+
+      if (groups.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      container.style.display = 'flex';
+      let html = `<div class="chip ${currentGroupFilter === '전체' ? 'active' : ''}" onclick="filterGroup('전체')">전체 조</div>`;
+      groups.forEach(function(g) {
+        html += `<div class="chip ${currentGroupFilter === g ? 'active' : ''}" onclick="filterGroup('${g}')">${g}</div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function filterGroup(g) {
+      currentGroupFilter = g;
+      renderGroupChips();
+      if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
+    }
+
     function submitCheckin() {
       const cls = document.getElementById('studentClassSelect').value;
       const name = document.getElementById('studentNameSelect').value;
@@ -394,7 +475,7 @@
       }
 
       if (confirm(`[${cls} ${name}] 학생,\n${evType} 확인을 완료하시겠습니까?`)) {
-        callApi('logCheckinEvent', { data: { gradeClass: cls, name: name, eventType: evType, by: '학생직접' } })
+        callApi('checkStudent', { gradeClass: cls, name: name, eventType: evType, by: '학생직접' })
           .then(function() {
             alert(`✅ ${name} 학생 [${evType}] 확인 완료되었습니다!`);
             document.getElementById('studentNameSelect').value = '';
@@ -517,14 +598,12 @@
         const evType = document.getElementById('teacherEventTypeSelect').value;
         showScanToast(`✅ [${targetStudent.gradeClass} ${targetStudent.name}] ${evType} 확인!`);
 
-        callApi('logCheckinEvent', {
-          data: {
-            gradeClass: targetStudent.gradeClass,
-            name: targetStudent.name,
-            room: targetStudent.room,
-            eventType: evType,
-            by: '교사QR스캔'
-          }
+        callApi('checkStudent', {
+          gradeClass: targetStudent.gradeClass,
+          name: targetStudent.name,
+          room: targetStudent.room,
+          eventType: evType,
+          by: '교사QR스캔'
         }).catch(function(err) {
           console.error('체크인 기록 실패:', err);
         });
@@ -544,17 +623,51 @@
 
     function resetCurrentAssembly() {
       const evType = document.getElementById('teacherEventTypeSelect').value;
-      if (confirm(`[${evType}] 점검을 새로 시작하시겠습니까?\n현재 화면의 체크 상태가 초기화됩니다.\n(※ 구글 시트의 이전 기록은 안전하게 보존됩니다.)`)) {
+      if (confirm(`[${evType}] 점검을 새로 시작하시겠습니까?\n모든 기기의 체크 상태가 함께 초기화됩니다.\n(※ 구글 시트의 이전 기록은 안전하게 보존됩니다.)`)) {
         const now = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
         document.getElementById('currentStatusTitle').innerText = `[${evType}] 현황`;
         document.getElementById('lastResetTime').innerText = `시작 시간: ${now}`;
 
-        fullStudents.forEach(s => {
-          if (currentClass === '전체' || s.gradeClass === currentClass) {
-            s.checkedAssembly = false;
-          }
-        });
+        fullStudents.forEach(s => { s.checkedAssembly = false; });
         renderAssemblyTeacher();
+
+        // 서버 쪽 상태도 초기화 -> 다른 기기들도 다음 폴링에서 초기화된 상태로 반영됨
+        callApi('resetAssembly', { eventType: evType }).catch(function(err) {
+          console.error('초기화 서버 반영 실패:', err);
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 여러 기기 간 실시간 동기화: 서버의 체크 현황을 주기적으로 가져와서 merge
+    // ─────────────────────────────────────────────
+    let assemblyPollTimer = null;
+
+    function syncAssemblyStatus() {
+      if (!isTeacher || fullStudents.length === 0) return;
+      const evType = document.getElementById('teacherEventTypeSelect').value;
+
+      callApi('getAssemblyStatus', { eventType: evType }).then(function(res) {
+        const checkedSet = new Set(res.checked || []);
+        fullStudents.forEach(s => {
+          s.checkedAssembly = checkedSet.has(s.gradeClass + '|' + s.name);
+        });
+        if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
+      }).catch(function(err) {
+        console.error('현황 동기화 실패:', err);
+      });
+    }
+
+    function startAssemblyPolling() {
+      stopAssemblyPolling();
+      syncAssemblyStatus(); // 탭 진입 즉시 한 번 동기화
+      assemblyPollTimer = setInterval(syncAssemblyStatus, 5000); // 5초마다 자동 동기화
+    }
+
+    function stopAssemblyPolling() {
+      if (assemblyPollTimer) {
+        clearInterval(assemblyPollTimer);
+        assemblyPollTimer = null;
       }
     }
 
@@ -573,6 +686,7 @@
       if (isTeacher) {
         if (confirm("교사 모드에서 로그아웃하시겠습니까?")) {
           stopScanner();
+          stopAssemblyPolling();
           isTeacher = false;
           fullStudents = [];
           document.getElementById('lockStatusBadge').innerText = "🔒 교사 로그인";
@@ -607,7 +721,10 @@
 
     function goToTab(tabKey) {
       currentTab = tabKey;
-      if (tabKey !== 'tab-assembly-teacher') stopScanner();
+      if (tabKey !== 'tab-assembly-teacher') {
+        stopScanner();
+        stopAssemblyPolling();
+      }
 
       document.getElementById('view-student-checkin').style.display = 'none';
       document.getElementById('view-teacher-monitoring').style.display = 'none';
@@ -623,6 +740,7 @@
         navBtns[0].classList.add('active');
         document.getElementById('view-teacher-monitoring').style.display = 'block';
         renderAssemblyTeacher();
+        startAssemblyPolling();
       } else if (tabKey === 'tab-rollcall') {
         navBtns[1].classList.add('active');
         document.getElementById('tab-rollcall').style.display = 'block';
@@ -647,6 +765,7 @@
     function switchAssemblySub(sub) {
       if (sub === 'student') {
         stopScanner();
+        stopAssemblyPolling();
         currentTab = 'tab-assembly-student';
         document.getElementById('view-student-checkin').style.display = 'block';
         document.getElementById('view-teacher-monitoring').style.display = 'none';
@@ -670,8 +789,12 @@
     }
 
     function renderAssemblyTeacher() {
-      const list = (currentClass === '전체' ? fullStudents : fullStudents.filter(s => s.gradeClass === currentClass))
+      let list = (currentClass === '전체' ? fullStudents : fullStudents.filter(s => s.gradeClass === currentClass))
         .filter(s => s.status === '참가');
+
+      if (currentGroupFilter !== '전체') {
+        list = list.filter(s => courseConfig.classToGroup[s.gradeClass] === currentGroupFilter);
+      }
 
       const checkedCount = list.filter(s => s.checkedAssembly).length;
       const totalCount = list.length;
@@ -706,10 +829,14 @@
     function toggleTeacherCheck(idx) {
       const s = fullStudents[idx];
       s.checkedAssembly = !s.checkedAssembly;
+      const evType = document.getElementById('teacherEventTypeSelect').value;
+
       if (s.checkedAssembly) {
-        const evType = document.getElementById('teacherEventTypeSelect').value;
-        callApi('logCheckinEvent', { data: { gradeClass: s.gradeClass, name: s.name, eventType: evType, by: '교사수동' } })
+        callApi('checkStudent', { gradeClass: s.gradeClass, name: s.name, eventType: evType, by: '교사수동' })
           .catch(function(err) { console.error('체크인 기록 실패:', err); });
+      } else {
+        callApi('uncheckStudent', { gradeClass: s.gradeClass, name: s.name, eventType: evType })
+          .catch(function(err) { console.error('체크 취소 반영 실패:', err); });
       }
       renderAssemblyTeacher();
     }
