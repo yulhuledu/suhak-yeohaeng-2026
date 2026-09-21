@@ -175,6 +175,13 @@
           <div id="classLockNotice" style="display:none; margin-top:8px; font-size:0.8rem; font-weight:700; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:9px 11px; line-height:1.4;"></div>
         </div>
 
+        <!-- 담임선생님이 작성한 우리 반 공지글 (학생 화면에만 표시) -->
+        <div id="classNoticeBox" style="display:none; margin-bottom:16px; background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:14px 16px;">
+          <div style="font-weight:800; font-size:0.88rem; color:#c2410c; margin-bottom:6px;" id="classNoticeTitle">📢 우리 반 공지</div>
+          <div style="font-size:0.88rem; color:#7c2d12; white-space:pre-wrap; line-height:1.5;" id="classNoticeText"></div>
+          <div style="font-size:0.72rem; color:#c2857a; margin-top:8px;" id="classNoticeTime"></div>
+        </div>
+
         <div class="form-group">
           <label>학생 본인 이름</label>
           <select id="studentNameSelect">
@@ -204,6 +211,34 @@
         </div>
         <p style="font-size:0.78rem; color:var(--gray); margin-top:4px;">담임선생님께 반별 링크를 드리면, 학생이 그 링크로 들어올 때 학급이 자동으로 고정돼요.</p>
         <div id="classLinkPanel" style="display:none; margin-top:8px;"></div>
+      </div>
+
+      <!-- 담임선생님 반별 공지글 작성 (학생 화면에만 표시됨) -->
+      <div class="qr-scanner-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleNoticeWritePanel()">
+          <strong style="font-size:0.95rem;">📢 우리 반 공지글 쓰기</strong>
+          <span id="noticeWriteToggleIcon">▼</span>
+        </div>
+        <p style="font-size:0.78rem; color:var(--gray); margin-top:4px;">담임선생님이 반을 골라 공지를 쓰면, 그 반을 선택한 학생 화면에만 보여요. (다른 반·모니터링 화면엔 안 보임)</p>
+        <div id="noticeWritePanel" style="display:none; margin-top:10px;">
+          <div class="form-group" style="margin-bottom:10px;">
+            <label>반 선택</label>
+            <select id="noticeClassSelect" onchange="loadNoticeIntoEditor()" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:10px; font-size:0.9rem;">
+              <option value="">-- 반을 선택하세요 --</option>
+              <option value="1반">1반</option><option value="2반">2반</option><option value="3반">3반</option><option value="4반">4반</option><option value="5반">5반</option>
+              <option value="6반">6반</option><option value="7반">7반</option><option value="8반">8반</option><option value="9반">9반</option><option value="10반">10반</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:10px;">
+            <label>공지 내용</label>
+            <textarea id="noticeTextInput" rows="4" placeholder="예) 오늘 저녁식사 후 19시까지 숙소 로비로 집합!" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:10px; font-size:0.9rem; resize:vertical; font-family:inherit;"></textarea>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button style="flex:1; padding:10px; border:none; border-radius:8px; background:var(--primary); color:#fff; font-weight:700;" onclick="saveClassNotice()">저장</button>
+            <button style="padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:#fff; font-weight:700; color:#94a3b8;" onclick="clearClassNotice()">지우기</button>
+          </div>
+          <div id="noticeSavedInfo" style="font-size:0.75rem; color:var(--gray); margin-top:6px;"></div>
+        </div>
       </div>
 
       <!-- 제어 패널 -->
@@ -419,9 +454,89 @@
         console.error('조/코스 설정 로드 실패:', err);
       });
 
+      const p3 = loadClassNotices();
+
       // 학생 명단 + 조/코스 설정이 모두 준비된 뒤 URL의 ?class= 값으로 학급 고정 적용
-      Promise.all([p1, p2]).then(applyClassLock);
+      Promise.all([p1, p2, p3]).then(applyClassLock);
+
+      // 학생 화면에 떠 있는 동안 담임 공지가 새로 올라오면 자동으로 반영되도록 주기적으로 갱신
+      setInterval(function() {
+        loadClassNotices().then(function() {
+          const cls = document.getElementById('studentClassSelect').value;
+          if (cls) renderClassNotice(cls);
+        });
+      }, 20000);
     };
+
+    // ── 반별 담임 공지글 (학생 화면 전용) ──
+    let classNotices = {};
+
+    function loadClassNotices() {
+      return callApi('getClassNotices').then(function(res) {
+        classNotices = res.notices || {};
+      }).catch(function(err) {
+        console.error('반 공지 로드 실패:', err);
+      });
+    }
+
+    function renderClassNotice(cls) {
+      const box = document.getElementById('classNoticeBox');
+      const notice = cls ? classNotices[cls] : null;
+      if (!notice || !notice.text) {
+        box.style.display = 'none';
+        return;
+      }
+      document.getElementById('classNoticeTitle').innerText = '📢 ' + cls + ' 공지';
+      document.getElementById('classNoticeText').innerText = notice.text;
+      document.getElementById('classNoticeTime').innerText = notice.updatedAt ? (notice.updatedAt + ' 업데이트') : '';
+      box.style.display = 'block';
+    }
+
+    // ── 교사 모드: 반별 공지글 작성 ──
+    let noticeWritePanelOpen = false;
+
+    function toggleNoticeWritePanel() {
+      noticeWritePanelOpen = !noticeWritePanelOpen;
+      document.getElementById('noticeWritePanel').style.display = noticeWritePanelOpen ? 'block' : 'none';
+      document.getElementById('noticeWriteToggleIcon').innerText = noticeWritePanelOpen ? '▲' : '▼';
+      if (noticeWritePanelOpen) {
+        loadClassNotices().then(loadNoticeIntoEditor);
+      }
+    }
+
+    function loadNoticeIntoEditor() {
+      const cls = document.getElementById('noticeClassSelect').value;
+      const notice = cls ? classNotices[cls] : null;
+      document.getElementById('noticeTextInput').value = notice ? notice.text : '';
+      document.getElementById('noticeSavedInfo').innerText = (notice && notice.updatedAt) ? ('마지막 저장: ' + notice.updatedAt) : '';
+    }
+
+    function saveClassNotice() {
+      const cls = document.getElementById('noticeClassSelect').value;
+      if (!cls) { alert('반을 먼저 선택해주세요.'); return; }
+      const text = document.getElementById('noticeTextInput').value.trim();
+      callApi('setClassNotice', { gradeClass: cls, notice: text }).then(function() {
+        alert(cls + ' 공지가 저장되었어요. 그 반을 선택한 학생 화면에 바로 보입니다.');
+        return loadClassNotices();
+      }).then(function() {
+        document.getElementById('noticeSavedInfo').innerText = (classNotices[cls] && classNotices[cls].updatedAt) ? ('마지막 저장: ' + classNotices[cls].updatedAt) : '';
+      }).catch(function(err) {
+        console.error('공지 저장 실패:', err);
+        alert('저장에 실패했어요. 다시 시도해주세요.');
+      });
+    }
+
+    function clearClassNotice() {
+      const cls = document.getElementById('noticeClassSelect').value;
+      if (!cls) { alert('반을 먼저 선택해주세요.'); return; }
+      if (!confirm(cls + ' 공지를 지울까요?')) return;
+      document.getElementById('noticeTextInput').value = '';
+      callApi('setClassNotice', { gradeClass: cls, notice: '' }).then(function() {
+        return loadClassNotices();
+      }).then(function() {
+        document.getElementById('noticeSavedInfo').innerText = '공지가 지워졌어요.';
+      });
+    }
 
     // ── 링크로 들어올 때 학급 고정하기 (?class=3반) ──
     // 담임선생님이 반별 링크를 학생들에게 공유하면, 그 링크로 들어온 학생은
@@ -549,6 +664,8 @@
         groupInfoEl.style.display = 'none';
         evSelect.innerHTML = buildEventTypeOptionsHtml([]);
       }
+
+      renderClassNotice(cls);
     }
 
     // 조 필터 칩 렌더링 (조편성 시트에 데이터가 있을 때만 표시)
