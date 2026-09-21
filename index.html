@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>2026 수학여행 인솔 지원 시스템</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- 경량 고속 HTML5 QR 스캐너 라이브러리 -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --border: #cbd5e1;
+      --bg: #f8fafc;
+      --text: #0f172a;
+      --gray: #64748b;
+      --rose: #db2777;
+      --rose-bg: #fdf2f8;
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 25px; }
+
+    header { background: #2251a3; color: #fff; text-align: center; padding: 16px 90px; position: relative; }
+    header h1 { font-size: 1.1rem; font-weight: 800; line-height: 1.35; word-break: keep-all; }
+    header p { font-size: 0.8rem; opacity: 0.85; margin-top: 3px; }
+    .pin-badge { position: absolute; right: 10px; top: 14px; max-width: 78px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 14px; font-size: 0.62rem; line-height: 1.3; padding: 5px 6px; cursor: pointer; color: #fff; text-align: center; white-space: normal; word-break: keep-all; }
+
+    .top-nav { display: flex; gap: 6px; padding: 10px 12px; max-width: 600px; margin: 0 auto; }
+    .top-nav-btn { flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 10px 0; font-weight: 700; font-size: 0.88rem; cursor: pointer; background: #fff; color: #475569; }
+    .top-nav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 0 12px; }
+
+    .class-scroll { display: flex; gap: 6px; overflow-x: auto; padding: 6px 0 12px; -webkit-overflow-scrolling: touch; }
+    .class-scroll::-webkit-scrollbar { display: none; }
+    .chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; color: #475569; }
+    .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .sub-nav { display: flex; background: #e2e8f0; border-radius: 10px; padding: 3px; margin-bottom: 12px; }
+    .sub-nav-btn { flex: 1; border: none; border-radius: 8px; padding: 8px 0; font-weight: 700; font-size: 0.85rem; cursor: pointer; background: transparent; color: #64748b; }
+    .sub-nav-btn.active { background: var(--primary); color: #fff; }
+
+    .status-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px 18px; margin-bottom: 12px; }
+    .status-header { display: flex; justify-content: space-between; align-items: center; }
+    .status-badge { background: #eff6ff; color: var(--primary); font-size: 0.95rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; border: 1px solid #bfdbfe; }
+
+    .control-panel { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; }
+    .control-select { flex: 1; padding: 9px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-weight: bold; background: #fff; }
+    .btn-reset { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 9px 12px; font-size: 0.85rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+
+    /* QR 스캐너 컨트롤 영역 */
+    .qr-scanner-card { background: #1e293b; color: #fff; border-radius: 14px; padding: 14px; margin-bottom: 12px; text-align: center; }
+    .scanner-btn-group { display: flex; gap: 8px; }
+    .btn-scanner-toggle { flex: 1; background: #10b981; color: #fff; border: none; border-radius: 10px; padding: 12px 8px; font-size: 0.88rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .btn-scanner-toggle.stop { background: #ef4444; }
+    .btn-cam-capture { flex: 1; background: #3b82f6; color: #fff; border: none; border-radius: 10px; padding: 12px 8px; font-size: 0.88rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+    #reader-container { width: 100%; max-width: 360px; margin: 10px auto 0; border-radius: 10px; overflow: hidden; display: none; background: #000; }
+    .scan-toast { background: #22c55e; color: #fff; font-weight: 800; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; margin-top: 8px; display: none; }
+
+    .student-box { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 24px 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .form-group { text-align: left; margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; color: #334155; }
+    .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 1rem; outline: none; background: #fff; }
+    .btn-checkin { width: 100%; background: var(--primary); color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 1.05rem; font-weight: 800; cursor: pointer; margin-top: 10px; }
+
+    .assembly-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .badge-num { background: #64748b; color: #fff; font-size: 0.8rem; border-radius: 6px; padding: 4px 7px; font-weight: 700; }
+    .badge-status { font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; font-weight: 700; margin-left: 6px; }
+    .status-not { background: #fef3c7; color: #d97706; }
+    .status-done { background: #dcfce7; color: #16a34a; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: none; }
+    .btn-call { border: 1px solid #fbcfe8; background: var(--rose-bg); color: var(--rose); }
+    .btn-check { background: var(--primary); color: #fff; }
+    .btn-checked { background: #e2e8f0; color: #94a3b8; }
+
+    .room-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 12px; overflow: hidden; }
+    .room-header { background: #f8fafc; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    .room-click { cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .badge-room { font-size: 0.75rem; padding: 2px 7px; border-radius: 4px; font-weight: 700; }
+    .badge-female { background: #fce7f3; color: #db2777; }
+    .badge-male { background: #e0e7ff; color: #4338ca; }
+    .room-row { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; }
+    .circle-chk { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #cbd5e1; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; cursor: pointer; }
+    .circle-chk.checked { background: var(--primary); border-color: var(--primary); color: #fff; font-size: 12px; }
+
+    .contact-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+    .call-btn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .call-chip { border-radius: 8px; padding: 8px 0; font-size: 0.82rem; font-weight: 700; text-align: center; text-decoration: none; display: block; }
+    .chip-student { border: 1px solid #bfdbfe; background: #eff6ff; color: var(--primary); }
+    .chip-p1 { border: 1px solid #bbf7d0; background: #f0fdf4; color: #16a34a; }
+    .chip-p2 { border: 1px solid #fbcfe8; background: #fdf2f8; color: var(--rose); }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center; padding: 14px; }
+    .modal-content { background: #fff; border-radius: 18px; width: 100%; max-width: 540px; padding: 20px; box-shadow: 0 16px 36px rgba(0,0,0,0.3); }
+    .building-plane-card { border-radius: 14px; padding: 14px; margin: 12px 0; border: 1.5px solid #cbd5e1; }
+    .building-plane-card.b-theme { background: #fff5f7; border-color: #fbcfe8; }
+    .building-plane-card.a-theme { background: #f0f7ff; border-color: #bfdbfe; }
+    .plane-grid-scroll { overflow-x: auto; padding: 8px 0; }
+    .plane-grid { display: grid; grid-auto-flow: column; grid-template-rows: auto 24px auto; gap: 8px; align-items: center; justify-content: center; min-width: 320px; }
+    .box-room { border: 1.5px solid #94a3b8; background: #ffffff; border-radius: 8px; padding: 10px 6px; text-align: center; font-size: 0.85rem; font-weight: 800; color: #1e293b; min-width: 62px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .box-room.target { background: #ef4444 !important; border-color: #b91c1c !important; color: #ffffff !important; font-size: 0.95rem; font-weight: 900; animation: pulse 1.2s infinite; transform: scale(1.06); z-index: 2; }
+    .box-room.facility { background: #e2e8f0; color: #64748b; font-size: 0.72rem; border-style: dashed; }
+    .plane-hallway { grid-column: 1 / -1; background: #cbd5e1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; color: #334155; font-weight: bold; letter-spacing: 2px; height: 100%; }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🚌 2026 수학여행 인솔 지원 시스템</h1>
+    <p>청북고등학교 실시간 안전 관리</p>
+    <div class="pin-badge" id="lockStatusBadge" onclick="handleLockClick()">🔒 교사 로그인</div>
+  </header>
+
+  <div class="top-nav">
+    <button class="top-nav-btn active" onclick="switchMainTab('tab-assembly')">📍 집합 점검</button>
+    <button class="top-nav-btn" onclick="requireTeacherAuth('tab-rollcall')">🛏️ 방배치도 (야간점호)</button>
+    <button class="top-nav-btn" onclick="requireTeacherAuth('tab-contacts')">📞 비상연락망</button>
+  </div>
+
+  <div class="container">
+    <!-- 상단 학급 선택 공통 칩 (교사 모드 전용) -->
+    <div class="class-scroll" id="globalClassChips" style="display:none;">
+      <div class="chip" onclick="filterClass('전체')">전체</div>
+      <div class="chip active" onclick="filterClass('1반')">1반</div>
+      <div class="chip" onclick="filterClass('2반')">2반</div>
+      <div class="chip" onclick="filterClass('3반')">3반</div>
+      <div class="chip" onclick="filterClass('4반')">4반</div>
+      <div class="chip" onclick="filterClass('5반')">5반</div>
+      <div class="chip" onclick="filterClass('6반')">6반</div>
+      <div class="chip" onclick="filterClass('7반')">7반</div>
+      <div class="chip" onclick="filterClass('8반')">8반</div>
+      <div class="chip" onclick="filterClass('9반')">9반</div>
+      <div class="chip" onclick="filterClass('10반')">10반</div>
+    </div>
+
+    <!-- 1-A. 학생 직접 체크인 -->
+    <div id="view-student-checkin">
+      <div class="sub-nav">
+        <button class="sub-nav-btn" onclick="requireTeacherAuth('tab-assembly-teacher')">선생님 모니터링</button>
+        <button class="sub-nav-btn active">학생 직접 체크인</button>
+      </div>
+
+      <div class="student-box">
+        <h2 style="font-size:1.25rem; font-weight:800; margin-bottom:6px;">📍 학생 도착 / 승차 확인</h2>
+        <p style="font-size:0.85rem; color:var(--gray); margin-bottom:18px;">구분과 본인 이름을 선택하고 확인을 누르세요.</p>
+
+        <div class="form-group">
+          <label>현재 상태 구분</label>
+          <select id="studentEventTypeSelect">
+            <option value="🚌 버스 탑승">🚌 버스 탑승 (승차 완료)</option>
+            <option value="📍 장소/체험지 집결">📍 장소/체험지 집결 완료</option>
+            <option value="🍽️ 식당 도착">🍽️ 식당 도착</option>
+            <option value="🛏️ 숙소 도착">🛏️ 숙소 도착</option>
+            <option value="🚶 버스 하차">🚶 버스 하차</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>학급 선택</label>
+          <select id="studentClassSelect" onchange="onStudentClassChange()">
+            <option value="">-- 반을 선택하세요 --</option>
+            <option value="1반">1반</option><option value="2반">2반</option><option value="3반">3반</option><option value="4반">4반</option><option value="5반">5반</option>
+            <option value="6반">6반</option><option value="7반">7반</option><option value="8반">8반</option><option value="9반">9반</option><option value="10반">10반</option>
+          </select>
+          <div id="studentGroupInfo" style="display:none; margin-top:6px; font-size:0.82rem; font-weight:700; color:var(--primary);"></div>
+          <div id="classLockNotice" style="display:none; margin-top:8px; font-size:0.8rem; font-weight:700; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:9px 11px; line-height:1.4;"></div>
+        </div>
+
+        <div class="form-group">
+          <label>학생 본인 이름</label>
+          <select id="studentNameSelect">
+            <option value="">반을 먼저 선택해주세요</option>
+          </select>
+        </div>
+
+        <button class="btn-checkin" onclick="submitCheckin()">📍 체크인 전송</button>
+      </div>
+    </div>
+
+    <!-- 1-B. 선생님 모니터링 -->
+    <div id="view-teacher-monitoring" style="display:none;">
+      <div class="sub-nav">
+        <button class="sub-nav-btn active">선생님 모니터링</button>
+        <button class="sub-nav-btn" onclick="switchAssemblySub('student')">학생 직접 체크인</button>
+      </div>
+
+      <!-- 조 필터 (조편성 시트에 데이터가 있을 때만 표시) -->
+      <div class="class-scroll" id="groupFilterChips" style="display:none;"></div>
+
+      <!-- 학급별 안내 링크 / 공지문구 생성 -->
+      <div class="qr-scanner-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleClassLinkPanel()">
+          <strong style="font-size:0.95rem;">🔗 학급별 안내 링크 · 공지문구 만들기</strong>
+          <span id="classLinkToggleIcon">▼</span>
+        </div>
+        <p style="font-size:0.78rem; color:var(--gray); margin-top:4px;">담임선생님께 반별 링크를 드리면, 학생이 그 링크로 들어올 때 학급이 자동으로 고정돼요.</p>
+        <div id="classLinkPanel" style="display:none; margin-top:8px;"></div>
+      </div>
+
+      <!-- 제어 패널 -->
+      <div class="control-panel">
+        <select class="control-select" id="teacherEventTypeSelect" onchange="syncAssemblyStatus()">
+          <option value="🚌 버스 탑승">🚌 버스 탑승</option>
+          <option value="📍 장소/체험지 집결">📍 장소/체험지 집결</option>
+          <option value="🍽️ 식당 도착">🍽️ 식당 도착</option>
+          <option value="🛏️ 숙소 도착">🛏️ 숙소 도착</option>
+          <option value="🚶 버스 하차">🚶 버스 하차</option>
+        </select>
+        <button class="btn-reset" onclick="resetCurrentAssembly()">🔄 새 체크 시작 (초기화)</button>
+      </div>
+
+      <!-- 2채널 QR 스캐너 컨트롤 (실시간 카메라 + 권한 우회 파일 촬영) -->
+      <div class="qr-scanner-card">
+        <div class="scanner-btn-group">
+          <button class="btn-scanner-toggle" id="btnToggleScan" onclick="toggleQrScanner()">
+            📹 실시간 비디오 스캐너
+          </button>
+          <button class="btn-cam-capture" onclick="triggerNativeCameraScan()">
+            📸 카메라 바로 촬영 스캔
+          </button>
+        </div>
+        <!-- (참고용) 권한 우회 대체 카메라 인풋: 실시간 스캐너가 정상 작동하면 굳이 안 써도 됩니다 -->
+        <input type="file" id="nativeQrInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileQrScan(event)">
+
+        <div id="reader-container">
+          <div id="qr-reader" style="width:100%;"></div>
+        </div>
+        <div class="scan-toast" id="scanToast"></div>
+      </div>
+
+      <!-- 현황 뱃지 카드 -->
+      <div class="status-card">
+        <div class="status-header">
+          <div>
+            <span style="font-weight:800;" id="currentStatusTitle">[🚌 버스 탑승] 현황</span>
+            <div style="font-size:0.75rem; color:var(--gray);" id="lastResetTime">시작 시간: 자동 기록중</div>
+          </div>
+          <span class="status-badge" id="assemblyCountBadge">0 / 0명 (0%)</span>
+        </div>
+      </div>
+      <div id="assemblyList"></div>
+    </div>
+
+    <!-- 2. 야간 점호 탭 -->
+    <div id="tab-rollcall" style="display:none;">
+      <div class="status-card">
+        <div class="status-header">
+          <div>
+            <div style="font-weight:800; font-size:1.05rem;" id="rollcallTitle">1반 점호 현황</div>
+            <div style="font-size:0.8rem; color:var(--gray); margin-top:2px;">호실명을 누르면 해당 동 전용 평면도가 뜹니다.</div>
+          </div>
+          <span class="status-badge" id="rollcallCountBadge">0 / 0</span>
+        </div>
+      </div>
+      <div style="color:var(--rose); font-weight:800; font-size:0.95rem; margin:14px 0 6px 4px;">👧 여학생 호실 (B동)</div>
+      <div id="femaleRoomList"></div>
+      <div style="color:#2563eb; font-weight:800; font-size:0.95rem; margin:14px 0 6px 4px;">👦 남학생 호실 (A동)</div>
+      <div id="maleRoomList"></div>
+    </div>
+
+    <!-- 3. 비상연락망 탭 -->
+    <div id="tab-contacts" style="display:none;">
+      <input type="text" style="width:100%; border:1px solid var(--border); border-radius:10px; padding:11px 14px; margin-bottom:12px; outline:none;" id="contactSearch" placeholder="🔍 학생 이름 또는 호실 검색" oninput="renderContacts()">
+      <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--gray); margin-bottom:8px;">
+        <span id="contactSubText">1반 명단</span>
+        <span id="contactTotalCount">0명</span>
+      </div>
+      <div id="contactList"></div>
+    </div>
+  </div>
+
+  <!-- 교사 PIN 모달 -->
+  <div class="modal-overlay" id="pinModal">
+    <div class="modal-content" style="text-align:center;">
+      <h3 style="font-size:1.15rem; font-weight:800; margin-bottom:8px;">🔒 교사 인증</h3>
+      <p style="font-size:0.85rem; color:var(--gray); margin-bottom:16px;">학생 정보 보호를 위해 PIN 번호를 입력하세요.</p>
+      <input type="password" id="pinInput" maxlength="6" placeholder="PIN 4자리" style="width:70%; font-size:1.4rem; letter-spacing:6px; text-align:center; padding:10px; border:2px solid var(--border); border-radius:10px; outline:none; margin-bottom:16px;">
+      <div style="display:flex; gap:8px;">
+        <button onclick="closePinModal()" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border); background:#fff; font-weight:bold;">취소</button>
+        <button onclick="verifyTeacherPin()" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--primary); color:#fff; font-weight:bold;">인증</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 건물별 완전 분리형 평면도 모달 -->
+  <div class="modal-overlay" id="roomMapModal" onclick="this.style.display='none'">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div>
+          <span id="modalBuildingBadge" style="font-size:0.75rem; font-weight:800; padding:3px 8px; border-radius:6px;">-</span>
+          <h2 id="modalRoomTitle" style="font-size:1.3rem; font-weight:900; color:#0f172a; margin-top:4px;">-</h2>
+        </div>
+        <button onclick="document.getElementById('roomMapModal').style.display='none'" style="border:none; background:#f1f5f9; width:32px; height:32px; border-radius:50%; font-weight:bold; cursor:pointer;">✕</button>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid var(--border); padding:10px 12px; border-radius:10px; font-size:0.85rem; margin-bottom:12px;">
+        👥 <strong>배정 학생:</strong> <span id="modalRoomMembers" style="color:#2563eb; font-weight:700;">-</span>
+      </div>
+
+      <div class="building-plane-card" id="modalPlaneCard">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:800; margin-bottom:6px;" id="modalPlaneHeader">
+          <span>평면도</span>
+          <span style="font-size:0.72rem; color:#64748b; font-weight:normal;">(복도 기준 위/아래 라인)</span>
+        </div>
+        <div class="plane-grid-scroll">
+          <div class="plane-grid" id="modalPlaneGrid"></div>
+        </div>
+      </div>
+
+      <button onclick="document.getElementById('roomMapModal').style.display='none'" style="width:100%; padding:11px; border:none; background:#e2e8f0; border-radius:10px; font-weight:bold; cursor:pointer; color:#334155;">닫기</button>
+    </div>
+  </div>
+
+  <script>
+    // ★★★ 배포한 Apps Script 웹앱의 /exec 주소를 여기에 붙여넣으세요 ★★★
+    const API_URL = "https://script.google.com/macros/s/AKfycbyCM12zkurk_4K4yxaeD9v4t51zyhUKF1cWbjDnuQfvZaiUkk1IL8NBaiihWySSPQwjFw/exec";
+
+    // Apps Script를 API처럼 호출하는 공통 헬퍼
+    // (주의: Content-Type을 application/json으로 명시하면 CORS 프리플라이트가 발생해 Apps Script가 응답하지 못합니다.
+    //  그래서 일부러 Content-Type 헤더를 지정하지 않습니다 — 기본값 text/plain으로 전송되어 프리플라이트를 피합니다.)
+    function callApi(action, extra) {
+      const body = Object.assign({ action: action }, extra || {});
+      return fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      }).then(function(res) {
+        return res.json();
+      });
+    }
+
+    let isTeacher = false;
+    let simpleStudents = [];
+    let fullStudents = [];
+    let currentClass = '1반';
+    let currentTab = 'tab-assembly-student';
+    let targetTabAfterAuth = '';
+
+    // 반-조 매핑 + 조별 코스 순서 (구글 시트 '조편성'/'코스순서' 탭에서 로드)
+    let courseConfig = { classToGroup: {}, groupCourses: {} };
+    let currentGroupFilter = '전체';
+
+    const DEFAULT_EVENT_TYPES = ['🚌 버스 탑승', '📍 장소/체험지 집결', '🍽️ 식당 도착', '🛏️ 숙소 도착', '🚶 버스 하차'];
+
+    // 기본 상태 목록 + 코스명 목록을 합쳐서 <option> HTML 생성 (중복 제거)
+    function buildEventTypeOptionsHtml(extraCourses) {
+      const all = DEFAULT_EVENT_TYPES.slice();
+      (extraCourses || []).forEach(function(name) {
+        if (all.indexOf(name) === -1) all.push(name);
+      });
+      return all.map(function(v) { return `<option value="${v}">${v}</option>`; }).join('');
+    }
+
+    // 조편성에 등록된 모든 조의 코스명을 중복 없이 합친 목록 (선생님 화면용)
+    function getAllCourseNames() {
+      const set = new Set();
+      Object.keys(courseConfig.groupCourses || {}).forEach(function(g) {
+        (courseConfig.groupCourses[g] || []).forEach(function(c) { set.add(c); });
+      });
+      return Array.from(set);
+    }
+
+    let html5QrCode = null;
+    let isScanning = false;
+    let lastScannedData = '';
+    let lastScanTime = 0;
+
+    // Web Audio 비프음(삑!) 생성 함수
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+      } catch(e) {}
+    }
+
+    // B동(여학생) 및 A동(남학생) 층별 독립 평면도 구조
+    const wingLayouts = {
+      'B_6': { title: '🏢 B동(여학생) 6층 평면도', top: ['658', '656', '654', '652'], bottom: ['659', '657', '655', '653', '651'] },
+      'B_5': { title: '🏢 B동(여학생) 5층 평면도', top: ['558', '556', '554', '552'], bottom: ['559', '557', '555', '553', '551'] },
+      'B_3': { title: '🏢 B동(여학생) 3층 평면도', top: ['358', '356', '354', '352'], bottom: ['359', '357', '355', '353', '351'] },
+      'B_2': { title: '🏢 B동(여학생) 2층 평면도', top: ['258', '256', '254', '252'], bottom: ['259', '257', '255', '253', '251'] },
+
+      'A_6': { title: '🏢 A동(남학생) 6층 평면도', top: ['630', '628', '626', '624', '622', '602', '604', '606', '608', '610'], bottom: ['631', '629', '627', '625', '623', '621', '601', '603', '605', '607', '609'] },
+      'A_5': { title: '🏢 A동(남학생) 5층 평면도', top: ['530', '528', '526', '524', '522', '502', '504', '506', '508', '510'], bottom: ['531', '529', '527', '525', '523', '521', '501', '503', '505', '507', '509', '511'] },
+      'A_3': { title: '🏢 A동(남학생) 3층 평면도', top: ['330', '328', '326', '324', '322', '302', '304', '306', '308', '310'], bottom: ['331', '329', '327', '325', '323', '321', '301', '303', '305', '307', '309', '311'] },
+      'A_2': { title: '🏢 A동 2층 평면도', top: ['통로/EV', '프런트'], bottom: ['부대업장'] }
+    };
+
+    window.onload = function() {
+      const p1 = callApi('getStudentSimpleData').then(function(res) {
+        simpleStudents = res.students || [];
+      }).catch(function(err) {
+        console.error('학생 명단 로드 실패:', err);
+      });
+
+      const p2 = callApi('getCourseConfig').then(function(res) {
+        courseConfig = { classToGroup: res.classToGroup || {}, groupCourses: res.groupCourses || {} };
+        // 선생님 쪽 구분 드롭다운에도 모든 코스명을 반영
+        const teacherSel = document.getElementById('teacherEventTypeSelect');
+        if (teacherSel) teacherSel.innerHTML = buildEventTypeOptionsHtml(getAllCourseNames());
+        renderGroupChips();
+      }).catch(function(err) {
+        console.error('조/코스 설정 로드 실패:', err);
+      });
+
+      // 학생 명단 + 조/코스 설정이 모두 준비된 뒤 URL의 ?class= 값으로 학급 고정 적용
+      Promise.all([p1, p2]).then(applyClassLock);
+    };
+
+    // ── 링크로 들어올 때 학급 고정하기 (?class=3반) ──
+    // 담임선생님이 반별 링크를 학생들에게 공유하면, 그 링크로 들어온 학생은
+    // 학급 선택 드롭다운이 자동으로 채워지고 잠겨서 실수로 다른 반을 고르는 것을 막아줍니다.
+    function applyClassLock() {
+      const params = new URLSearchParams(window.location.search);
+      const lockedClass = params.get('class');
+      if (!lockedClass) return;
+
+      const sel = document.getElementById('studentClassSelect');
+      const hasOption = Array.from(sel.options).some(function(o) { return o.value === lockedClass; });
+      if (!hasOption) return;
+
+      sel.value = lockedClass;
+      onStudentClassChange();
+      sel.disabled = true;
+      sel.style.background = '#f1f5f9';
+      sel.style.color = '#475569';
+
+      const notice = document.getElementById('classLockNotice');
+      notice.style.display = 'block';
+      notice.innerHTML = '🔒 <strong>' + lockedClass + '</strong>으로 고정된 링크예요. ' +
+        '<span style="text-decoration:underline; cursor:pointer;" onclick="unlockClass()">다른 반인가요? (선택 해제)</span>';
+    }
+
+    function unlockClass() {
+      const sel = document.getElementById('studentClassSelect');
+      sel.disabled = false;
+      sel.style.background = '';
+      sel.style.color = '';
+      sel.value = '';
+      document.getElementById('classLockNotice').style.display = 'none';
+      updateStudentNameDropdown();
+    }
+
+    // ── 교사 모드: 학급별 안내 링크 / 공지문구 생성 ──
+    let classLinkPanelOpen = false;
+    const ALL_CLASSES = ['1반','2반','3반','4반','5반','6반','7반','8반','9반','10반'];
+
+    function getBaseUrl() {
+      return window.location.origin + window.location.pathname;
+    }
+
+    function buildClassLink(cls) {
+      return getBaseUrl() + '?class=' + encodeURIComponent(cls);
+    }
+
+    function buildClassAnnouncement(cls) {
+      const link = buildClassLink(cls);
+      return '[청북고 수학여행 체크인 안내 - ' + cls + ']\n\n' +
+        '학생들은 아래 링크를 눌러서 체크인 페이지로 들어가 주세요.\n' +
+        '(이 링크로 들어가면 학급이 자동으로 "' + cls + '"으로 고정되어 있어서, 학급 선택 없이 본인 이름만 고르면 됩니다.)\n\n' +
+        '🔗 ' + link + '\n\n' +
+        '📍 버스 탑승 / 장소 도착 / 식당 도착 / 숙소 도착 등 지금 상황에 맞는 항목을 고른 뒤 [체크인 전송]을 눌러주세요.';
+    }
+
+    function toggleClassLinkPanel() {
+      classLinkPanelOpen = !classLinkPanelOpen;
+      const panel = document.getElementById('classLinkPanel');
+      document.getElementById('classLinkToggleIcon').innerText = classLinkPanelOpen ? '▲' : '▼';
+      if (!classLinkPanelOpen) { panel.style.display = 'none'; return; }
+      panel.style.display = 'block';
+      panel.innerHTML = ALL_CLASSES.map(function(cls) {
+        return '<div style="display:flex; justify-content:space-between; align-items:center; padding:9px 2px; border-bottom:1px solid var(--border);">' +
+          '<span style="font-weight:700; font-size:0.88rem;">' + cls + '</span>' +
+          '<button style="padding:7px 12px; border:none; border-radius:8px; background:var(--primary); color:#fff; font-weight:700; font-size:0.78rem;" onclick="copyClassAnnouncement(\'' + cls + '\')">📋 안내문 복사</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    function copyClassAnnouncement(cls) {
+      const text = buildClassAnnouncement(cls);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          alert(cls + ' 안내문이 복사되었어요. 담임선생님 단톡방 등에 붙여넣기 하시면 됩니다.');
+        }).catch(function() { fallbackCopyText(text, cls); });
+      } else {
+        fallbackCopyText(text, cls);
+      }
+    }
+
+    function fallbackCopyText(text, cls) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+        alert(cls + ' 안내문이 복사되었어요.');
+      } catch (e) {
+        prompt('복사가 안 되면 아래 내용을 직접 선택해서 복사하세요:', text);
+      }
+      document.body.removeChild(ta);
+    }
+
+    function updateStudentNameDropdown() {
+      const cls = document.getElementById('studentClassSelect').value;
+      const nameSel = document.getElementById('studentNameSelect');
+      if (!cls) {
+        nameSel.innerHTML = '<option value="">반을 먼저 선택해주세요</option>';
+        return;
+      }
+      const filtered = simpleStudents.filter(s => s.gradeClass === cls);
+      nameSel.innerHTML = '<option value="">-- 본인 이름을 선택하세요 --</option>' +
+        filtered.map(s => `<option value="${s.name}" data-num="${s.num}">${s.num}번 ${s.name}</option>`).join('');
+    }
+
+    // 학급 선택이 바뀔 때: 이름 목록 갱신 + 소속 조 표시 + 그 조의 코스 순서로 "현재 상태" 드롭다운 재구성
+    function onStudentClassChange() {
+      updateStudentNameDropdown();
+
+      const cls = document.getElementById('studentClassSelect').value;
+      const groupInfoEl = document.getElementById('studentGroupInfo');
+      const evSelect = document.getElementById('studentEventTypeSelect');
+      const group = courseConfig.classToGroup[cls];
+
+      if (group) {
+        groupInfoEl.style.display = 'block';
+        groupInfoEl.innerText = `👥 소속 조: ${group}`;
+        evSelect.innerHTML = buildEventTypeOptionsHtml(courseConfig.groupCourses[group] || []);
+      } else {
+        groupInfoEl.style.display = 'none';
+        evSelect.innerHTML = buildEventTypeOptionsHtml([]);
+      }
+    }
+
+    // 조 필터 칩 렌더링 (조편성 시트에 데이터가 있을 때만 표시)
+    function renderGroupChips() {
+      const container = document.getElementById('groupFilterChips');
+      if (!container) return;
+      const groups = Array.from(new Set(Object.values(courseConfig.classToGroup || {})));
+
+      if (groups.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      container.style.display = 'flex';
+      let html = `<div class="chip ${currentGroupFilter === '전체' ? 'active' : ''}" onclick="filterGroup('전체')">전체 조</div>`;
+      groups.forEach(function(g) {
+        html += `<div class="chip ${currentGroupFilter === g ? 'active' : ''}" onclick="filterGroup('${g}')">${g}</div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function filterGroup(g) {
+      currentGroupFilter = g;
+      renderGroupChips();
+      if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
+    }
+
+    function submitCheckin() {
+      const cls = document.getElementById('studentClassSelect').value;
+      const name = document.getElementById('studentNameSelect').value;
+      const evType = document.getElementById('studentEventTypeSelect').value;
+
+      if (!cls || !name) {
+        alert('반과 이름을 선택해주세요.');
+        return;
+      }
+
+      if (confirm(`[${cls} ${name}] 학생,\n${evType} 확인을 완료하시겠습니까?`)) {
+        callApi('checkStudent', { gradeClass: cls, name: name, eventType: evType, by: '학생직접' })
+          .then(function() {
+            alert(`✅ ${name} 학생 [${evType}] 확인 완료되었습니다!`);
+            document.getElementById('studentNameSelect').value = '';
+          })
+          .catch(function(err) {
+            alert('전송 실패: ' + err);
+          });
+      }
+    }
+
+    // 1. 실시간 비디오 스트림 스캐너
+    function toggleQrScanner() {
+      const container = document.getElementById('reader-container');
+      const btn = document.getElementById('btnToggleScan');
+
+      if (!isScanning) {
+        container.style.display = 'block';
+        btn.innerText = '⏹️ 비디오 끄기';
+        btn.classList.add('stop');
+        startScanner();
+      } else {
+        stopScanner();
+      }
+    }
+
+    function startScanner() {
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("qr-reader");
+      }
+      const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        html5QrCode.start(
+          { facingMode: "environment" },
+          config,
+          onQrScanSuccess,
+          function(err) {}
+        ).then(function() {
+          isScanning = true;
+        }).catch(function(err) {
+          resetScannerUI();
+          alert("카메라 시작 실패\n" + err);
+        });
+      } else {
+        resetScannerUI();
+        alert("이 브라우저는 실시간 카메라(getUserMedia) 자체를 지원하지 않습니다.");
+      }
+    }
+
+    function resetScannerUI() {
+      document.getElementById('reader-container').style.display = 'none';
+      const btn = document.getElementById('btnToggleScan');
+      btn.innerText = '📹 실시간 비디오 스캐너';
+      btn.classList.remove('stop');
+      isScanning = false;
+    }
+
+    function stopScanner() {
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(resetScannerUI).catch(resetScannerUI);
+      } else {
+        resetScannerUI();
+      }
+    }
+
+    // 2. [참고용] 스마트폰 기본 카메라 촬영으로 즉시 QR 판독 (실시간 스캐너가 잘 되면 안 써도 됨)
+    function triggerNativeCameraScan() {
+      document.getElementById('nativeQrInput').click();
+    }
+
+    function handleFileQrScan(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("qr-reader");
+      }
+
+      showScanToast("🔍 QR코드 분석 중...");
+
+      html5QrCode.scanFile(file, true)
+        .then(function(decodedText) {
+          onQrScanSuccess(decodedText);
+          document.getElementById('nativeQrInput').value = '';
+        })
+        .catch(function(err) {
+          alert("QR코드를 인식하지 못했습니다. 명찰 QR이 선명하게 보이도록 다시 촬영해 주세요.");
+          document.getElementById('nativeQrInput').value = '';
+        });
+    }
+
+    // QR 판독 공통 처리부
+    function onQrScanSuccess(decodedText) {
+      const now = Date.now();
+      if (decodedText === lastScannedData && (now - lastScanTime < 2500)) return;
+
+      lastScannedData = decodedText;
+      lastScanTime = now;
+
+      const parts = decodedText.split('_');
+      let targetClass = '';
+      let targetName = '';
+
+      if (parts.length >= 3) {
+        targetClass = parts[0].trim();
+        targetName = parts[2].trim();
+      } else {
+        targetName = decodedText.trim();
+      }
+
+      const targetStudent = fullStudents.find(s => {
+        if (targetClass) return s.gradeClass === targetClass && s.name === targetName;
+        return s.name === targetName;
+      });
+
+      if (targetStudent) {
+        playBeep();
+        targetStudent.checkedAssembly = true;
+
+        const evType = document.getElementById('teacherEventTypeSelect').value;
+        showScanToast(`✅ [${targetStudent.gradeClass} ${targetStudent.name}] ${evType} 확인!`);
+
+        callApi('checkStudent', {
+          gradeClass: targetStudent.gradeClass,
+          name: targetStudent.name,
+          room: targetStudent.room,
+          eventType: evType,
+          by: '교사QR스캔'
+        }).catch(function(err) {
+          console.error('체크인 기록 실패:', err);
+        });
+
+        renderAssemblyTeacher();
+      } else {
+        showScanToast(`⚠️ 등록되지 않은 학생: ${decodedText}`);
+      }
+    }
+
+    function showScanToast(msg) {
+      const toast = document.getElementById('scanToast');
+      toast.innerText = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2200);
+    }
+
+    function resetCurrentAssembly() {
+      const evType = document.getElementById('teacherEventTypeSelect').value;
+      if (confirm(`[${evType}] 점검을 새로 시작하시겠습니까?\n모든 기기의 체크 상태가 함께 초기화됩니다.\n(※ 구글 시트의 이전 기록은 안전하게 보존됩니다.)`)) {
+        const now = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('currentStatusTitle').innerText = `[${evType}] 현황`;
+        document.getElementById('lastResetTime').innerText = `시작 시간: ${now}`;
+
+        fullStudents.forEach(s => { s.checkedAssembly = false; });
+        renderAssemblyTeacher();
+
+        // 서버 쪽 상태도 초기화 -> 다른 기기들도 다음 폴링에서 초기화된 상태로 반영됨
+        callApi('resetAssembly', { eventType: evType }).catch(function(err) {
+          console.error('초기화 서버 반영 실패:', err);
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // 여러 기기 간 실시간 동기화: 서버의 체크 현황을 주기적으로 가져와서 merge
+    // ─────────────────────────────────────────────
+    let assemblyPollTimer = null;
+
+    function syncAssemblyStatus() {
+      if (!isTeacher || fullStudents.length === 0) return;
+      const evType = document.getElementById('teacherEventTypeSelect').value;
+
+      callApi('getAssemblyStatus', { eventType: evType }).then(function(res) {
+        const checkedSet = new Set(res.checked || []);
+        fullStudents.forEach(s => {
+          s.checkedAssembly = checkedSet.has(s.gradeClass + '|' + s.name);
+        });
+        if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
+      }).catch(function(err) {
+        console.error('현황 동기화 실패:', err);
+      });
+    }
+
+    function startAssemblyPolling() {
+      stopAssemblyPolling();
+      syncAssemblyStatus(); // 탭 진입 즉시 한 번 동기화
+      assemblyPollTimer = setInterval(syncAssemblyStatus, 5000); // 5초마다 자동 동기화
+    }
+
+    function stopAssemblyPolling() {
+      if (assemblyPollTimer) {
+        clearInterval(assemblyPollTimer);
+        assemblyPollTimer = null;
+      }
+    }
+
+    function requireTeacherAuth(targetTab) {
+      if (isTeacher) {
+        goToTab(targetTab);
+      } else {
+        targetTabAfterAuth = targetTab;
+        document.getElementById('pinModal').style.display = 'flex';
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+      }
+    }
+
+    function handleLockClick() {
+      if (isTeacher) {
+        if (confirm("교사 모드에서 로그아웃하시겠습니까?")) {
+          stopScanner();
+          stopAssemblyPolling();
+          isTeacher = false;
+          fullStudents = [];
+          document.getElementById('lockStatusBadge').innerText = "🔒 교사 로그인";
+          document.getElementById('globalClassChips').style.display = 'none';
+          switchAssemblySub('student');
+        }
+      } else {
+        requireTeacherAuth('tab-assembly-teacher');
+      }
+    }
+
+    function closePinModal() {
+      document.getElementById('pinModal').style.display = 'none';
+    }
+
+    function verifyTeacherPin() {
+      const pin = document.getElementById('pinInput').value;
+      callApi('getTeacherFullData', { pin: pin }).then(function(res) {
+        if (res.error) {
+          alert('❌ PIN 번호가 일치하지 않습니다. (2026)');
+          return;
+        }
+        isTeacher = true;
+        fullStudents = res.students || [];
+        document.getElementById('lockStatusBadge').innerText = "🔓 교사 모드 작동중";
+        closePinModal();
+        goToTab(targetTabAfterAuth || 'tab-assembly-teacher');
+      }).catch(function(err) {
+        alert('인증 요청 실패: ' + err);
+      });
+    }
+
+    function goToTab(tabKey) {
+      currentTab = tabKey;
+      if (tabKey !== 'tab-assembly-teacher') {
+        stopScanner();
+        stopAssemblyPolling();
+      }
+
+      document.getElementById('view-student-checkin').style.display = 'none';
+      document.getElementById('view-teacher-monitoring').style.display = 'none';
+      document.getElementById('tab-rollcall').style.display = 'none';
+      document.getElementById('tab-contacts').style.display = 'none';
+
+      document.getElementById('globalClassChips').style.display = isTeacher ? 'flex' : 'none';
+
+      const navBtns = document.querySelectorAll('.top-nav-btn');
+      navBtns.forEach(b => b.classList.remove('active'));
+
+      if (tabKey === 'tab-assembly-teacher') {
+        navBtns[0].classList.add('active');
+        document.getElementById('view-teacher-monitoring').style.display = 'block';
+        renderAssemblyTeacher();
+        startAssemblyPolling();
+      } else if (tabKey === 'tab-rollcall') {
+        navBtns[1].classList.add('active');
+        document.getElementById('tab-rollcall').style.display = 'block';
+        renderRollcall();
+      } else if (tabKey === 'tab-contacts') {
+        navBtns[2].classList.add('active');
+        document.getElementById('tab-contacts').style.display = 'block';
+        renderContacts();
+      }
+    }
+
+    function switchMainTab(tabId) {
+      if (tabId === 'tab-assembly') {
+        if (isTeacher) {
+          goToTab('tab-assembly-teacher');
+        } else {
+          switchAssemblySub('student');
+        }
+      }
+    }
+
+    function switchAssemblySub(sub) {
+      if (sub === 'student') {
+        stopScanner();
+        stopAssemblyPolling();
+        currentTab = 'tab-assembly-student';
+        document.getElementById('view-student-checkin').style.display = 'block';
+        document.getElementById('view-teacher-monitoring').style.display = 'none';
+        document.getElementById('tab-rollcall').style.display = 'none';
+        document.getElementById('tab-contacts').style.display = 'none';
+        document.getElementById('globalClassChips').style.display = 'none';
+
+        const navBtns = document.querySelectorAll('.top-nav-btn');
+        navBtns.forEach(b => b.classList.remove('active'));
+        navBtns[0].classList.add('active');
+      }
+    }
+
+    function filterClass(cls) {
+      currentClass = cls;
+      document.querySelectorAll('#globalClassChips .chip').forEach(c => c.classList.toggle('active', c.innerText === cls));
+
+      if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
+      else if (currentTab === 'tab-rollcall') renderRollcall();
+      else if (currentTab === 'tab-contacts') renderContacts();
+    }
+
+    function renderAssemblyTeacher() {
+      let list = (currentClass === '전체' ? fullStudents : fullStudents.filter(s => s.gradeClass === currentClass))
+        .filter(s => s.status === '참가');
+
+      if (currentGroupFilter !== '전체') {
+        list = list.filter(s => courseConfig.classToGroup[s.gradeClass] === currentGroupFilter);
+      }
+
+      const checkedCount = list.filter(s => s.checkedAssembly).length;
+      const totalCount = list.length;
+      const percent = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
+
+      document.getElementById('assemblyCountBadge').innerText = `${checkedCount} / ${totalCount}명 (${percent}%)`;
+
+      let html = '';
+      list.forEach(s => {
+        const sIdx = fullStudents.indexOf(s);
+        html += `
+          <div class="assembly-card">
+            <div style="display:flex; align-items:center;">
+              <span class="badge-num">${s.num}번</span>
+              <strong style="font-size:1rem; margin-left:8px;">${s.name}</strong>
+              <span class="badge-status ${s.checkedAssembly ? 'status-done' : 'status-not'}">
+                ${s.checkedAssembly ? '완료' : '미확인'}
+              </span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              ${s.studentTel ? `<a href="tel:${s.studentTel}" class="btn btn-call">📞 전화</a>` : ''}
+              <button class="btn ${s.checkedAssembly ? 'btn-checked' : 'btn-check'}" onclick="toggleTeacherCheck(${sIdx})">
+                ${s.checkedAssembly ? '취소' : '확인'}
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('assemblyList').innerHTML = html || '<p style="text-align:center; padding:20px;">참가 학생 데이터가 없습니다.</p>';
+    }
+
+    function toggleTeacherCheck(idx) {
+      const s = fullStudents[idx];
+      s.checkedAssembly = !s.checkedAssembly;
+      const evType = document.getElementById('teacherEventTypeSelect').value;
+
+      if (s.checkedAssembly) {
+        callApi('checkStudent', { gradeClass: s.gradeClass, name: s.name, eventType: evType, by: '교사수동' })
+          .catch(function(err) { console.error('체크인 기록 실패:', err); });
+      } else {
+        callApi('uncheckStudent', { gradeClass: s.gradeClass, name: s.name, eventType: evType })
+          .catch(function(err) { console.error('체크 취소 반영 실패:', err); });
+      }
+      renderAssemblyTeacher();
+    }
+
+    function renderRollcall() {
+      const list = (currentClass === '전체' ? fullStudents : fullStudents.filter(s => s.gradeClass === currentClass))
+        .filter(s => s.status === '참가');
+
+      const done = list.filter(s => s.checkedRollcall).length;
+      document.getElementById('rollcallTitle').innerText = `${currentClass} 점호 현황`;
+      document.getElementById('rollcallCountBadge').innerText = `${done} / ${list.length}명`;
+
+      const femaleRooms = {};
+      const maleRooms = {};
+
+      list.forEach(s => {
+        const r = s.room || '미배정';
+        const isF = (s.gender && s.gender.includes('여')) || (s.building && s.building.includes('B동'));
+        const target = isF ? femaleRooms : maleRooms;
+        if (!target[r]) target[r] = [];
+        target[r].push(s);
+      });
+
+      function buildGroup(obj, isFemale) {
+        let h = '';
+        for (const [room, stList] of Object.entries(obj)) {
+          const rDone = stList.filter(s => s.checkedRollcall).length;
+          h += `
+            <div class="room-card">
+              <div class="room-header">
+                <div class="room-click" onclick="openRoomMap('${room}', '${stList.map(s => s.name).join(', ')}')">
+                  <strong style="font-size:1.05rem;">${room}</strong>
+                  <span class="badge-room ${isFemale ? 'badge-female' : 'badge-male'}">${isFemale ? '여학생' : '남학생'}</span>
+                  <span style="font-size:0.75rem; color:var(--primary); font-weight:bold;">🗺️ 위치보기</span>
+                </div>
+                <span style="font-size:0.85rem; color:var(--gray); font-weight:bold;">${rDone}/${stList.length}명 확인</span>
+              </div>
+          `;
+          stList.forEach(s => {
+            const sIdx = fullStudents.indexOf(s);
+            h += `
+              <div class="room-row">
+                <div style="display:flex; align-items:center; cursor:pointer;" onclick="fullStudents[${sIdx}].checkedRollcall = !fullStudents[${sIdx}].checkedRollcall; renderRollcall();">
+                  <span class="circle-chk ${s.checkedRollcall ? 'checked' : ''}">${s.checkedRollcall ? '✓' : ''}</span>
+                  <span style="font-size:1rem; font-weight:700;">${s.name}</span>
+                </div>
+                ${s.studentTel ? `<a href="tel:${s.studentTel}" class="btn btn-call">📞 연락</a>` : ''}
+              </div>
+            `;
+          });
+          h += `</div>`;
+        }
+        return h;
+      }
+
+      document.getElementById('femaleRoomList').innerHTML = buildGroup(femaleRooms, true) || '<p style="color:var(--gray); padding:8px;">배정된 여학생 방이 없습니다.</p>';
+      document.getElementById('maleRoomList').innerHTML = buildGroup(maleRooms, false) || '<p style="color:var(--gray); padding:8px;">배정된 남학생 방이 없습니다.</p>';
+    }
+
+    function openRoomMap(roomWithHo, members) {
+      const rawRoom = roomWithHo.replace('호', '').trim();
+      const floor = rawRoom.charAt(0);
+      const isFemale = parseInt(rawRoom.substring(1)) >= 50;
+      const wingKey = (isFemale ? 'B_' : 'A_') + floor;
+      const layout = wingLayouts[wingKey] || wingLayouts['B_6'];
+
+      const badgeEl = document.getElementById('modalBuildingBadge');
+      const cardEl = document.getElementById('modalPlaneCard');
+
+      if (isFemale) {
+        badgeEl.innerText = `B동 (여학생동) · ${floor}층`;
+        badgeEl.style.background = '#fce7f3';
+        badgeEl.style.color = '#db2777';
+        cardEl.className = 'building-plane-card b-theme';
+      } else {
+        badgeEl.innerText = `A동 (남학생동) · ${floor}층`;
+        badgeEl.style.background = '#e0e7ff';
+        badgeEl.style.color = '#2563eb';
+        cardEl.className = 'building-plane-card a-theme';
+      }
+
+      document.getElementById('modalRoomTitle').innerText = roomWithHo;
+      document.getElementById('modalRoomMembers').innerText = members;
+      document.getElementById('modalPlaneHeader').firstElementChild.innerText = layout.title;
+
+      const maxLen = Math.max(layout.top.length, layout.bottom.length);
+      let topHtml = '';
+      let bottomHtml = '';
+
+      for (let i = 0; i < maxLen; i++) {
+        const topRoom = layout.top[i] || '';
+        const botRoom = layout.bottom[i] || '';
+
+        if (topRoom) {
+          const isTarget = (topRoom === rawRoom);
+          topHtml += `<div class="box-room ${isTarget ? 'target' : ''}">${topRoom}${isTarget ? '<br><span style="font-size:0.65rem;">★현재</span>' : ''}</div>`;
+        } else {
+          topHtml += `<div class="box-room facility">-</div>`;
+        }
+
+        if (botRoom) {
+          const isTarget = (botRoom === rawRoom);
+          bottomHtml += `<div class="box-room ${isTarget ? 'target' : ''}">${botRoom}${isTarget ? '<br><span style="font-size:0.65rem;">★현재</span>' : ''}</div>`;
+        } else {
+          bottomHtml += `<div class="box-room facility">-</div>`;
+        }
+      }
+
+      const hallwayDirection = isFemale ? '◀ 엘리베이터(E/V) 연결통로 방향' : '엘리베이터(E/V) 연결통로 방향 ▶';
+      const gridHtml = `
+        ${topHtml}
+        <div class="plane-hallway">${hallwayDirection}</div>
+        ${bottomHtml}
+      `;
+
+      const gridEl = document.getElementById('modalPlaneGrid');
+      gridEl.style.gridTemplateColumns = `repeat(${maxLen}, minmax(62px, 1fr))`;
+      gridEl.innerHTML = gridHtml;
+
+      document.getElementById('roomMapModal').style.display = 'flex';
+
+      setTimeout(() => {
+        const targetEl = document.querySelector('.box-room.target');
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+      }, 80);
+    }
+
+    function renderContacts() {
+      const q = document.getElementById('contactSearch').value.trim();
+      let list = currentClass === '전체' ? fullStudents : fullStudents.filter(s => s.gradeClass === currentClass);
+
+      if (q) {
+        list = list.filter(s => s.name.includes(q) || s.room.includes(q));
+      }
+
+      document.getElementById('contactSubText').innerText = `${currentClass} 명단`;
+      document.getElementById('contactTotalCount').innerText = `${list.length}명`;
+
+      let html = '';
+      list.forEach(s => {
+        html += `
+          <div class="contact-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span style="font-size:0.85rem; color:var(--gray);">${s.gradeClass} ${s.num}번</span>
+                <strong style="font-size:1.05rem; margin-left:4px;">${s.name}</strong>
+                <span style="font-size:0.75rem; margin-left:6px; font-weight:bold; color:${s.status === '참가' ? '#16a34a' : '#dc2626'};">[${s.status}]</span>
+              </div>
+              <span style="background:#eff6ff; color:#2563eb; font-weight:800; font-size:0.85rem; padding:3px 8px; border-radius:6px;">${s.room}</span>
+            </div>
+            <div class="call-btn-grid">
+              ${s.studentTel ? `<a href="tel:${s.studentTel}" class="call-chip chip-student">📞 학생</a>` : ''}
+              ${s.parent1Tel ? `<a href="tel:${s.parent1Tel}" class="call-chip chip-p1">📞 보호자1</a>` : ''}
+              ${s.parent2Tel ? `<a href="tel:${s.parent2Tel}" class="call-chip chip-p2">📞 보호자2</a>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('contactList').innerHTML = html || '<p style="text-align:center; padding:20px;">검색 결과가 없습니다.</p>';
+    }
+  </script>
+</body>
+</html>
