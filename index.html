@@ -932,17 +932,38 @@
 
     function verifyTeacherPin() {
       const pin = document.getElementById('pinInput').value;
-      callApi('getTeacherFullData', { pin: pin }).then(function(res) {
-        if (res.error) {
-          alert('❌ PIN 번호가 일치하지 않습니다. (2026)');
+      const authBtn = document.querySelector('#pinModal button[onclick="verifyTeacherPin()"]');
+      if (authBtn) { authBtn.disabled = true; authBtn.innerText = '확인 중...'; }
+
+      // 1) PIN만 먼저 빠르게 확인 (스프레드시트 접근 없이 즉시 응답) — 인증 버튼을 누르고 나서
+      //    체감하는 대기시간의 대부분은 사실 ~300명 명단을 읽어오는 시간이었습니다.
+      //    그래서 PIN 확인은 즉시 끝내고, 무거운 명단 로딩은 화면 전환 이후 백그라운드에서 진행합니다.
+      callApi('verifyPin', { pin: pin }).then(function(res) {
+        if (authBtn) { authBtn.disabled = false; authBtn.innerText = '인증'; }
+        if (!res.valid) {
+          alert('❌ PIN 번호가 일치하지 않습니다.');
           return;
         }
+
         isTeacher = true;
-        fullStudents = res.students || [];
-        document.getElementById('lockStatusBadge').innerText = "🔓 교사 모드 작동중";
+        document.getElementById('lockStatusBadge').innerText = "🔓 명단 불러오는 중...";
         closePinModal();
         goToTab(targetTabAfterAuth || 'tab-assembly-teacher');
+
+        // 2) 명단(방배정 포함)은 뒤이어 불러와서, 도착하는 대로 현재 화면을 다시 그려줍니다.
+        callApi('getTeacherFullData', { pin: pin }).then(function(res2) {
+          fullStudents = res2.students || [];
+          document.getElementById('lockStatusBadge').innerText = "🔓 교사 모드 작동중";
+          if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
+          else if (currentTab === 'tab-rollcall') renderRollcall();
+          else if (currentTab === 'tab-contacts') renderContacts();
+        }).catch(function(err) {
+          console.error('명단 로드 실패:', err);
+          document.getElementById('lockStatusBadge').innerText = "🔓 교사 모드 작동중";
+          alert('명단을 불러오는 데 실패했어요. 화면을 새로고침해서 다시 시도해주세요.');
+        });
       }).catch(function(err) {
+        if (authBtn) { authBtn.disabled = false; authBtn.innerText = '인증'; }
         alert('인증 요청 실패: ' + err);
       });
     }
