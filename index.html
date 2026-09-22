@@ -509,6 +509,10 @@
     window.onload = function() {
       const p1 = callApi('getStudentSimpleData').then(function(res) {
         simpleStudents = res.students || [];
+        // 명단이 아직 안 왔을 때 학생이 반을 먼저 선택해버린 경우를 대비해,
+        // 명단이 도착하면 이미 선택된 반 기준으로 이름 목록을 다시 채워줍니다.
+        const cls = document.getElementById('studentClassSelect').value;
+        if (cls) updateStudentNameDropdown();
       }).catch(function(err) {
         console.error('학생 명단 로드 실패:', err);
       });
@@ -726,6 +730,11 @@
       const nameSel = document.getElementById('studentNameSelect');
       if (!cls) {
         nameSel.innerHTML = '<option value="">반을 먼저 선택해주세요</option>';
+        return;
+      }
+      if (simpleStudents.length === 0) {
+        // 아직 명단이 서버에서 도착하기 전 (보통 1~2초 이내) — 빈 목록 대신 로딩 중임을 알려줍니다.
+        nameSel.innerHTML = '<option value="">명단 불러오는 중...</option>';
         return;
       }
       const filtered = simpleStudents.filter(s => s.gradeClass === cls);
