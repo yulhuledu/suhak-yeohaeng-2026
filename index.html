@@ -113,6 +113,13 @@
   </style>
 </head>
 <body>
+  <script>
+    // 교사 전용 입구(teacher.html -> ?entry=teacher)로 들어온 경우, 학생 체크인 화면이
+    // 잠깐 보였다 사라지는 깜빡임 없이 바로 감추기 위한 스크립트입니다 (실제 로직은 아래 메인 스크립트에서 처리).
+    if (new URLSearchParams(location.search).get('entry') === 'teacher') {
+      document.write('<style>#view-student-checkin{display:none !important;}</style>');
+    }
+  </script>
 
   <header>
     <h1>🚌 2026 수학여행 인솔 지원 시스템</h1>
@@ -180,6 +187,15 @@
           <div style="font-weight:800; font-size:0.88rem; color:#c2410c; margin-bottom:6px;" id="classNoticeTitle">📢 우리 반 공지</div>
           <div style="font-size:0.88rem; color:#7c2d12; white-space:pre-wrap; line-height:1.5;" id="classNoticeText"></div>
           <div style="font-size:0.72rem; color:#c2857a; margin-top:8px;" id="classNoticeTime"></div>
+        </div>
+
+        <!-- 우리 팀 전체 일정 (눌러서 코스별 안내문/주의사항 팝업 보기) -->
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleScheduleList()">
+            <label style="margin:0;">📋 우리 팀 일정 (눌러서 안내 보기)</label>
+            <span id="scheduleToggleIcon">▼</span>
+          </div>
+          <div id="scheduleListBox" style="display:none; margin-top:8px;"></div>
         </div>
 
         <div class="form-group">
@@ -326,6 +342,22 @@
     </div>
   </div>
 
+  <!-- 코스별 안내문 / 주의사항 팝업 -->
+  <div class="modal-overlay" id="coursePopupModal" onclick="closeCoursePopup()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 id="coursePopupTitle" style="font-size:1.1rem; font-weight:800; margin-bottom:14px;">-</h3>
+      <div style="text-align:left; margin-bottom:12px;">
+        <div style="font-size:0.78rem; font-weight:800; color:var(--primary); margin-bottom:4px;">📖 안내</div>
+        <div id="coursePopupInfo" style="font-size:0.88rem; line-height:1.55; color:#334155; white-space:pre-wrap;">-</div>
+      </div>
+      <div style="text-align:left; margin-bottom:18px; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:11px 13px;">
+        <div style="font-size:0.78rem; font-weight:800; color:#c2410c; margin-bottom:4px;">⚠️ 주의사항</div>
+        <div id="coursePopupCaution" style="font-size:0.88rem; line-height:1.55; color:#7c2d12; white-space:pre-wrap;">-</div>
+      </div>
+      <button onclick="closeCoursePopup()" style="width:100%; padding:11px; border:none; background:#e2e8f0; border-radius:10px; font-weight:bold; cursor:pointer; color:#334155;">닫기</button>
+    </div>
+  </div>
+
   <!-- 건물별 완전 분리형 평면도 모달 -->
   <div class="modal-overlay" id="roomMapModal" onclick="this.style.display='none'">
     <div class="modal-content" onclick="event.stopPropagation()">
@@ -455,9 +487,13 @@
       });
 
       const p3 = loadClassNotices();
+      const p4 = loadCourseInfo();
 
       // 학생 명단 + 조/코스 설정이 모두 준비된 뒤 URL의 ?class= 값으로 학급 고정 적용
-      Promise.all([p1, p2, p3]).then(applyClassLock);
+      Promise.all([p1, p2, p3, p4]).then(applyClassLock);
+
+      // 교사 전용 입구(teacher.html)로 들어온 경우 곧장 인증 절차로 진입 (학생 데이터 로딩과 무관하게 즉시 시도)
+      autoEnterTeacherEntry();
 
       // 학생 화면에 떠 있는 동안 담임 공지가 새로 올라오면 자동으로 반영되도록 주기적으로 갱신
       setInterval(function() {
@@ -490,6 +526,73 @@
       document.getElementById('classNoticeText').innerText = notice.text;
       document.getElementById('classNoticeTime').innerText = notice.updatedAt ? (notice.updatedAt + ' 업데이트') : '';
       box.style.display = 'block';
+    }
+
+    // ── 코스(활동)별 안내문 · 주의사항 — "우리 팀 일정" 목록에서 코스를 누르면 팝업으로 표시 ──
+    let courseInfoItems = []; // [{keyword, info, caution}, ...] — 위에서부터 순서대로 코스명에 keyword가 포함되는지 검사
+    let scheduleListOpen = false;
+
+    function loadCourseInfo() {
+      return callApi('getCourseInfo').then(function(res) {
+        courseInfoItems = res.items || [];
+      }).catch(function(err) {
+        console.error('코스 안내 로드 실패:', err);
+      });
+    }
+
+    function findCourseInfo(courseName) {
+      for (let i = 0; i < courseInfoItems.length; i++) {
+        if (courseName.indexOf(courseInfoItems[i].keyword) !== -1) return courseInfoItems[i];
+      }
+      return null;
+    }
+
+    function toggleScheduleList() {
+      scheduleListOpen = !scheduleListOpen;
+      document.getElementById('scheduleToggleIcon').innerText = scheduleListOpen ? '▲' : '▼';
+      document.getElementById('scheduleListBox').style.display = scheduleListOpen ? 'block' : 'none';
+      if (scheduleListOpen) renderScheduleList();
+    }
+
+    function renderScheduleList() {
+      const box = document.getElementById('scheduleListBox');
+      const cls = document.getElementById('studentClassSelect').value;
+      const group = cls ? courseConfig.classToGroup[cls] : null;
+      const courses = group ? (courseConfig.groupCourses[group] || []) : [];
+
+      if (!courses.length) {
+        box.innerHTML = '<div style="font-size:0.82rem; color:var(--gray); padding:4px 2px;">반을 먼저 선택하면 우리 팀 일정이 여기에 표시돼요.</div>';
+        return;
+      }
+
+      let lastDay = '';
+      let html = '';
+      courses.forEach(function(name, idx) {
+        const dayMatch = name.match(/^\[(\d)일차\]/);
+        const day = dayMatch ? dayMatch[1] + '일차' : '';
+        const label = name.replace(/^\[\d일차\]\s*/, '');
+        if (day && day !== lastDay) {
+          html += '<div style="font-weight:800; font-size:0.78rem; color:var(--primary); margin:10px 0 4px;">' + day + '</div>';
+          lastDay = day;
+        }
+        const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        html += '<div onclick="openCoursePopup(\'' + safeName + '\')" style="padding:9px 11px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:#fff;">' +
+          '<span>' + (idx + 1) + '. ' + label + '</span><span style="color:#94a3b8; font-size:0.9rem;">ⓘ</span></div>';
+      });
+      box.innerHTML = html;
+    }
+
+    function openCoursePopup(courseName) {
+      const info = findCourseInfo(courseName);
+      const label = courseName.replace(/^\[\d일차\]\s*/, '');
+      document.getElementById('coursePopupTitle').innerText = label;
+      document.getElementById('coursePopupInfo').innerText = (info && info.info) ? info.info : '등록된 안내문이 아직 없어요.';
+      document.getElementById('coursePopupCaution').innerText = (info && info.caution) ? info.caution : '등록된 주의사항이 아직 없어요.';
+      document.getElementById('coursePopupModal').style.display = 'flex';
+    }
+
+    function closeCoursePopup() {
+      document.getElementById('coursePopupModal').style.display = 'none';
     }
 
     // ── 교사 모드: 반별 공지글 작성 ──
@@ -666,6 +769,7 @@
       }
 
       renderClassNotice(cls);
+      if (scheduleListOpen) renderScheduleList();
     }
 
     // 조 필터 칩 렌더링 (조편성 시트에 데이터가 있을 때만 표시)
@@ -912,11 +1016,12 @@
 
     function handleLockClick() {
       if (isTeacher) {
-        if (confirm("교사 모드에서 로그아웃하시겠습니까?")) {
+        if (confirm("교사 모드에서 로그아웃하시겠습니까? (이 기기에 저장된 자동 로그인도 함께 해제됩니다)")) {
           stopScanner();
           stopAssemblyPolling();
           isTeacher = false;
           fullStudents = [];
+          try { localStorage.removeItem(TEACHER_PIN_STORAGE_KEY); } catch (e) {}
           document.getElementById('lockStatusBadge').innerText = "🔒 교사 로그인";
           document.getElementById('globalClassChips').style.display = 'none';
           switchAssemblySub('student');
@@ -930,20 +1035,40 @@
       document.getElementById('pinModal').style.display = 'none';
     }
 
+    const TEACHER_PIN_STORAGE_KEY = 'suhak2026_teacherPinRemembered';
+
     function verifyTeacherPin() {
       const pin = document.getElementById('pinInput').value;
+      authenticateWithPin(pin, { manual: true });
+    }
+
+    // manual: 모달에서 사람이 직접 "인증"을 눌렀는지 여부 (자동 로그인 시도와 에러 처리를 다르게 하기 위함)
+    function authenticateWithPin(pin, opts) {
+      opts = opts || {};
       const authBtn = document.querySelector('#pinModal button[onclick="verifyTeacherPin()"]');
-      if (authBtn) { authBtn.disabled = true; authBtn.innerText = '확인 중...'; }
+      if (opts.manual && authBtn) { authBtn.disabled = true; authBtn.innerText = '확인 중...'; }
 
       // 1) PIN만 먼저 빠르게 확인 (스프레드시트 접근 없이 즉시 응답) — 인증 버튼을 누르고 나서
       //    체감하는 대기시간의 대부분은 사실 ~300명 명단을 읽어오는 시간이었습니다.
       //    그래서 PIN 확인은 즉시 끝내고, 무거운 명단 로딩은 화면 전환 이후 백그라운드에서 진행합니다.
       callApi('verifyPin', { pin: pin }).then(function(res) {
-        if (authBtn) { authBtn.disabled = false; authBtn.innerText = '인증'; }
+        if (opts.manual && authBtn) { authBtn.disabled = false; authBtn.innerText = '인증'; }
         if (!res.valid) {
-          alert('❌ PIN 번호가 일치하지 않습니다.');
+          if (opts.manual) {
+            alert('❌ PIN 번호가 일치하지 않습니다.');
+          } else {
+            // 이 기기에 기억해둔 PIN으로 자동 로그인을 시도했는데 실패한 경우
+            // (예: PIN이 바뀜) — 기억된 값을 지우고 수동 입력창을 띄워줍니다.
+            try { localStorage.removeItem(TEACHER_PIN_STORAGE_KEY); } catch (e) {}
+            targetTabAfterAuth = 'tab-assembly-teacher';
+            document.getElementById('pinModal').style.display = 'flex';
+            document.getElementById('pinInput').value = '';
+          }
           return;
         }
+
+        // 이 기기에 PIN을 기억해둬서, 다음부터는(특히 교사 전용 링크로 들어올 때) 다시 안 물어봅니다.
+        try { localStorage.setItem(TEACHER_PIN_STORAGE_KEY, pin); } catch (e) {}
 
         isTeacher = true;
         document.getElementById('lockStatusBadge').innerText = "🔓 명단 불러오는 중...";
@@ -963,9 +1088,28 @@
           alert('명단을 불러오는 데 실패했어요. 화면을 새로고침해서 다시 시도해주세요.');
         });
       }).catch(function(err) {
-        if (authBtn) { authBtn.disabled = false; authBtn.innerText = '인증'; }
+        if (opts.manual && authBtn) { authBtn.disabled = false; authBtn.innerText = '인증'; }
         alert('인증 요청 실패: ' + err);
       });
+    }
+
+    // 교사 전용 입구(teacher.html)로 들어왔을 때: 이 기기에 기억된 PIN이 있으면 조용히 바로 로그인하고,
+    // 없으면 PIN 입력창을 바로 띄워서 "선생님 모니터링" 버튼을 누르는 절차 없이 곧장 인증하게 합니다.
+    function autoEnterTeacherEntry() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('entry') !== 'teacher') return;
+
+      let rememberedPin = null;
+      try { rememberedPin = localStorage.getItem(TEACHER_PIN_STORAGE_KEY); } catch (e) {}
+
+      targetTabAfterAuth = 'tab-assembly-teacher';
+      if (rememberedPin) {
+        authenticateWithPin(rememberedPin, { manual: false });
+      } else {
+        document.getElementById('pinModal').style.display = 'flex';
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+      }
     }
 
     function goToTab(tabKey) {
