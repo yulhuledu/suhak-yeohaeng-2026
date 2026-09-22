@@ -219,16 +219,6 @@
       <!-- 조 필터 (조편성 시트에 데이터가 있을 때만 표시) -->
       <div class="class-scroll" id="groupFilterChips" style="display:none;"></div>
 
-      <!-- 학급별 안내 링크 / 공지문구 생성 -->
-      <div class="qr-scanner-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleClassLinkPanel()">
-          <strong style="font-size:0.95rem;">🔗 학급별 안내 링크 · 공지문구 만들기</strong>
-          <span id="classLinkToggleIcon">▼</span>
-        </div>
-        <p style="font-size:0.78rem; color:var(--gray); margin-top:4px;">담임선생님께 반별 링크를 드리면, 학생이 그 링크로 들어올 때 학급이 자동으로 고정돼요.</p>
-        <div id="classLinkPanel" style="display:none; margin-top:8px;"></div>
-      </div>
-
       <!-- 담임선생님 반별 공지글 작성 (학생 화면에만 표시됨) -->
       <div class="qr-scanner-card">
         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleNoticeWritePanel()">
@@ -682,69 +672,6 @@
       sel.value = '';
       document.getElementById('classLockNotice').style.display = 'none';
       updateStudentNameDropdown();
-    }
-
-    // ── 교사 모드: 학급별 안내 링크 / 공지문구 생성 ──
-    let classLinkPanelOpen = false;
-    const ALL_CLASSES = ['1반','2반','3반','4반','5반','6반','7반','8반','9반','10반'];
-
-    function getBaseUrl() {
-      return window.location.origin + window.location.pathname;
-    }
-
-    function buildClassLink(cls) {
-      return getBaseUrl() + '?class=' + encodeURIComponent(cls);
-    }
-
-    function buildClassAnnouncement(cls) {
-      const link = buildClassLink(cls);
-      return '[청북고 수학여행 체크인 안내 - ' + cls + ']\n\n' +
-        '학생들은 아래 링크를 눌러서 체크인 페이지로 들어가 주세요.\n' +
-        '(이 링크로 들어가면 학급이 자동으로 "' + cls + '"으로 고정되어 있어서, 학급 선택 없이 본인 이름만 고르면 됩니다.)\n\n' +
-        '🔗 ' + link + '\n\n' +
-        '📍 버스 탑승 / 장소 도착 / 식당 도착 / 숙소 도착 등 지금 상황에 맞는 항목을 고른 뒤 [체크인 전송]을 눌러주세요.';
-    }
-
-    function toggleClassLinkPanel() {
-      classLinkPanelOpen = !classLinkPanelOpen;
-      const panel = document.getElementById('classLinkPanel');
-      document.getElementById('classLinkToggleIcon').innerText = classLinkPanelOpen ? '▲' : '▼';
-      if (!classLinkPanelOpen) { panel.style.display = 'none'; return; }
-      panel.style.display = 'block';
-      panel.innerHTML = ALL_CLASSES.map(function(cls) {
-        return '<div style="display:flex; justify-content:space-between; align-items:center; padding:9px 2px; border-bottom:1px solid var(--border);">' +
-          '<span style="font-weight:700; font-size:0.88rem;">' + cls + '</span>' +
-          '<button style="padding:7px 12px; border:none; border-radius:8px; background:var(--primary); color:#fff; font-weight:700; font-size:0.78rem;" onclick="copyClassAnnouncement(\'' + cls + '\')">📋 안내문 복사</button>' +
-        '</div>';
-      }).join('');
-    }
-
-    function copyClassAnnouncement(cls) {
-      const text = buildClassAnnouncement(cls);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function() {
-          alert(cls + ' 안내문이 복사되었어요. 담임선생님 단톡방 등에 붙여넣기 하시면 됩니다.');
-        }).catch(function() { fallbackCopyText(text, cls); });
-      } else {
-        fallbackCopyText(text, cls);
-      }
-    }
-
-    function fallbackCopyText(text, cls) {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      try {
-        document.execCommand('copy');
-        alert(cls + ' 안내문이 복사되었어요.');
-      } catch (e) {
-        prompt('복사가 안 되면 아래 내용을 직접 선택해서 복사하세요:', text);
-      }
-      document.body.removeChild(ta);
     }
 
     function updateStudentNameDropdown() {
