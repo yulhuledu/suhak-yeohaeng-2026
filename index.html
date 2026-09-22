@@ -129,8 +129,8 @@
 
   <div class="top-nav">
     <button class="top-nav-btn active" onclick="switchMainTab('tab-assembly')">📍 집합 점검</button>
-    <button class="top-nav-btn" onclick="requireTeacherAuth('tab-rollcall')">🛏️ 방배치도 (야간점호)</button>
-    <button class="top-nav-btn" onclick="requireTeacherAuth('tab-contacts')">📞 비상연락망</button>
+    <button class="top-nav-btn" id="navBtnRollcall" style="display:none;" onclick="requireTeacherAuth('tab-rollcall')">🛏️ 방배치도 (야간점호)</button>
+    <button class="top-nav-btn" id="navBtnContacts" style="display:none;" onclick="requireTeacherAuth('tab-contacts')">📞 비상연락망</button>
   </div>
 
   <div class="container">
@@ -939,6 +939,13 @@
       }
     }
 
+    // 방배치도/비상연락망 탭은 교사에게만 보이게 합니다. (학생 화면에는 아예 안 보여서
+    // "눌러보면 뭐가 나올까" 하는 오클릭/호기심 클릭 자체를 줄이는 목적)
+    function updateTeacherOnlyNavVisibility() {
+      document.getElementById('navBtnRollcall').style.display = isTeacher ? '' : 'none';
+      document.getElementById('navBtnContacts').style.display = isTeacher ? '' : 'none';
+    }
+
     function requireTeacherAuth(targetTab) {
       if (isTeacher) {
         goToTab(targetTab);
@@ -960,6 +967,7 @@
           try { localStorage.removeItem(TEACHER_PIN_STORAGE_KEY); } catch (e) {}
           document.getElementById('lockStatusBadge').innerText = "🔒 교사 로그인";
           document.getElementById('globalClassChips').style.display = 'none';
+          updateTeacherOnlyNavVisibility();
           switchAssemblySub('student');
         }
       } else {
@@ -1008,6 +1016,7 @@
 
         isTeacher = true;
         document.getElementById('lockStatusBadge').innerText = "🔓 명단 불러오는 중...";
+        updateTeacherOnlyNavVisibility();
         closePinModal();
         goToTab(targetTabAfterAuth || 'tab-assembly-teacher');
 
