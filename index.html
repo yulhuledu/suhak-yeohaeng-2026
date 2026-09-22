@@ -340,7 +340,7 @@
             <textarea id="noticeTextInput" rows="4" placeholder="예) 오늘 저녁식사 후 19시까지 숙소 로비로 집합!" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:10px; font-size:0.9rem; resize:vertical; font-family:inherit;"></textarea>
           </div>
           <div style="display:flex; gap:8px;">
-            <button style="flex:1; padding:10px; border:none; border-radius:8px; background:var(--primary); color:#fff; font-weight:700;" onclick="saveClassNotice()">저장</button>
+            <button id="noticeSaveBtn" style="flex:1; padding:10px; border:none; border-radius:8px; background:var(--primary); color:#fff; font-weight:700;" onclick="saveClassNotice()">저장</button>
             <button style="padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:#fff; font-weight:700; color:#94a3b8;" onclick="clearClassNotice()">지우기</button>
           </div>
           <div id="noticeSavedInfo" style="font-size:0.75rem; color:var(--gray); margin-top:6px;"></div>
@@ -690,14 +690,36 @@
       const cls = document.getElementById('noticeClassSelect').value;
       if (!cls) { alert('반을 먼저 선택해주세요.'); return; }
       const text = document.getElementById('noticeTextInput').value.trim();
+      const btn = document.getElementById('noticeSaveBtn');
+      const infoEl = document.getElementById('noticeSavedInfo');
+
+      // 저장 버튼을 누르자마자 바로 "저장 중..."으로 바뀌어서, 응답이 오기 전까지
+      // 반응이 없어 보여 여러 번 눌러버리는 일을 줄입니다.
+      btn.disabled = true;
+      btn.innerText = '저장 중...';
+      infoEl.style.color = 'var(--gray)';
+      infoEl.innerText = '저장 중이에요...';
+
       callApi('setClassNotice', { gradeClass: cls, notice: text }).then(function() {
-        alert(cls + ' 공지가 저장되었어요. 그 반을 선택한 학생 화면에 바로 보입니다.');
-        return loadClassNotices();
-      }).then(function() {
-        document.getElementById('noticeSavedInfo').innerText = (classNotices[cls] && classNotices[cls].updatedAt) ? ('마지막 저장: ' + classNotices[cls].updatedAt) : '';
+        // 여기까지 왔으면 저장 자체는 이미 성공한 상태입니다. 화면에 보여줄 "마지막 저장
+        // 시각"을 새로고침하는 건 그 다음 단계라, 이 갱신이 실패하더라도 "저장 실패"라고
+        // 잘못 안내하지 않도록 별도의 .catch로 분리했습니다.
+        btn.disabled = false;
+        btn.innerText = '저장';
+        infoEl.style.color = '#16a34a';
+        infoEl.innerText = '✅ 저장 완료';
+        return loadClassNotices().then(function() {
+          const updatedAt = classNotices[cls] && classNotices[cls].updatedAt;
+          infoEl.innerText = '✅ 저장 완료' + (updatedAt ? (' · ' + updatedAt) : '');
+        }).catch(function(err) {
+          console.error('저장 후 목록 새로고침 실패 (공지 자체는 저장됨):', err);
+        });
       }).catch(function(err) {
         console.error('공지 저장 실패:', err);
-        alert('저장에 실패했어요. 다시 시도해주세요.');
+        btn.disabled = false;
+        btn.innerText = '저장';
+        infoEl.style.color = '#dc2626';
+        infoEl.innerText = '❌ 저장에 실패했어요. 다시 시도해주세요.';
       });
     }
 
