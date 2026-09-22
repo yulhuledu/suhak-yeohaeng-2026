@@ -541,8 +541,13 @@
     }
 
     function findCourseInfo(courseName) {
+      // 한글은 자모가 풀어써진 형태(NFD)로 저장될 때가 있어(특히 스프레드시트 셀을 직접
+      // 수정/붙여넣기 한 경우) 눈으로는 똑같아 보여도 문자열 비교가 실패할 수 있습니다.
+      // normalize('NFC')로 양쪽을 같은 형태로 맞춰서 비교합니다.
+      const target = (courseName || '').normalize('NFC');
       for (let i = 0; i < courseInfoItems.length; i++) {
-        if (courseName.indexOf(courseInfoItems[i].keyword) !== -1) return courseInfoItems[i];
+        const keyword = (courseInfoItems[i].keyword || '').normalize('NFC');
+        if (keyword && target.indexOf(keyword) !== -1) return courseInfoItems[i];
       }
       return null;
     }
@@ -584,6 +589,10 @@
 
     function openCoursePopup(courseName) {
       const info = findCourseInfo(courseName);
+      if (!info) {
+        // 안내문이 안 뜰 때 원인 파악용 로그 — 브라우저 개발자도구 콘솔에서 확인 가능
+        console.warn('코스 안내 매칭 실패:', courseName, '/ 불러온 키워드 목록:', courseInfoItems.map(function(i){ return i.keyword; }));
+      }
       const label = courseName.replace(/^\[\d일차\]\s*/, '');
       document.getElementById('coursePopupTitle').innerText = label;
       document.getElementById('coursePopupInfo').innerText = (info && info.info) ? info.info : '등록된 안내문이 아직 없어요.';
