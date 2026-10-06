@@ -59,6 +59,8 @@
 
   /* stage intro */
   .si{text-align:center}
+  .cover{display:block;width:100%;max-width:340px;aspect-ratio:1/1;object-fit:cover;border-radius:16px;margin:0 auto 10px;border:1px solid var(--line)}
+  .herop{display:block;width:100%;border-radius:14px;margin-bottom:12px}
   .si .big{font-size:3.4rem;margin:2px 0 6px}
   .tag{display:inline-block;background:var(--sky);color:#075985;font-weight:800;font-size:.72rem;padding:3px 11px;border-radius:12px;letter-spacing:.04em}
   .si h2{margin:8px 0 8px}
@@ -168,7 +170,7 @@ const SCORE_API_URL = "https://script.google.com/macros/s/AKfycbwOEmSz8lR0W7CY6-
 const TOTAL_STAGES = 8;
 
 const STAGES = [
-  { id:'S1', icon:'🚌', name:'출발! 이동 중 안전', badge:'안전벨트 배지', type:'ox', perQ:15,
+  { id:'S1', icon:'🚌', name:'출발! 이동 중 안전', cover:'s1', badge:'안전벨트 배지', type:'ox', perQ:15,
     story:'제주행 길, 버스와 공항 이동이 이어져요. 사고는 대개 "잠깐인데 뭐 어때" 하는 순간에 일어나요.',
     mission:'O/X로 판단하세요. 문제당 15초! 틀리면 하트가 줄어요.',
     summary:['달리는 버스에서는 자리에서 일어나지 않기','고속도로에서는 버스 모든 좌석에서도 안전띠 착용','비상구·통로는 짐으로 막지 않기, 비상구 위치는 미리 확인'],
@@ -193,7 +195,7 @@ const STAGES = [
     prompt:'갑판 위에서 위험하게 행동하는 친구 4명을 찾아보세요.',
     summary:['구명조끼는 수영을 잘해도 승선하는 동안 계속 착용','난간에 앉거나 몸을 내밀지 않기 — 흔들림 한 번이면 바다로 떨어짐','뱃머리 끝, 젖은 갑판에서는 뛰지 않기','선원의 안내에 따라 지정된 곳에서만 움직이기']},
 
-  { id:'S3', icon:'🏎️', name:'9.81파크 레이싱 체험', badge:'규정 준수 배지', type:'choice',
+  { id:'S3', icon:'🏎️', name:'9.81파크 레이싱 체험', cover:'s3', badge:'규정 준수 배지', type:'choice',
     story:'"중력 가속도 9.81"에서 이름을 딴 무동력 레이싱 체험! 속도가 붙으면 작은 실수가 큰 사고가 돼요.',
     mission:'상황을 읽고 가장 안전한 행동을 고르세요. 시설별 기준은 현장 안내를 따르는 게 원칙이에요.',
     summary:['탑승 기준(나이·키)은 그 차량의 안전장치가 맞게 설계된 범위 — 몰래 어기지 않기','앞차와는 항상 안전거리 유지, 추월·밀기 금지','사고가 나도 직원 신호 전에는 임의로 내리지 않기'],
@@ -215,7 +217,7 @@ const STAGES = [
         why:'내가 코스에 내리는 순간 뒤따라오는 차에 치일 위험이 생겨요. 멈춘 뒤 직원 안내를 기다리는 게 원칙이에요.' }
     ]},
 
-  { id:'S4', icon:'🎯', name:'아레나엑스 서바이벌', badge:'장비 수칙 배지', type:'ox', perQ:15,
+  { id:'S4', icon:'🎯', name:'아레나엑스 서바이벌', cover:'s4', badge:'장비 수칙 배지', type:'ox', perQ:15,
     story:'어두운 실내, 경보등과 스모그, 지뢰 장치까지! 몰입감이 높은 만큼 부딪히고 넘어지는 사고가 많아요.',
     mission:'O/X로 판단하세요. 문제당 15초!',
     summary:['실내 서바이벌은 뛰지 말고 시야를 확인하며 이동','장비 이상·불편·어지러움은 바로 중단하고 스태프에게 알리기','장비를 장난으로 얼굴에 겨누지 않기, 연출 장치는 만지지 않기'],
@@ -240,7 +242,7 @@ const STAGES = [
     prompt:'레일바이크에서 위험한 행동 4가지를 찾아보세요.',
     summary:['앞차와는 항상 충분한 간격 유지 — 브레이크는 즉시 서지 않아요','달리는 중에는 앉은 자세 유지, 일어서지 않기','몸·팔을 밖으로 내밀어 촬영하지 않기','휴대폰은 정차 후, 브레이크를 잡을 수 있는 자세로']},
 
-  { id:'S6', icon:'🛍️', name:'올레시장 · 한담해변 자유시간', badge:'자유시간 배지', type:'choice',
+  { id:'S6', icon:'🛍️', name:'올레시장 · 한담해변 자유시간', cover:'s6', badge:'자유시간 배지', type:'choice',
     story:'소지품 분실, 낯선 음식, 바닷가 사진 찍기 — 자유시간에 일어나는 일은 대부분 "혼자 판단"에서 시작돼요.',
     mission:'상황을 읽고 가장 안전한 행동을 고르세요.',
     summary:['귀중품은 몸 앞쪽에 두고, 모둠이 함께 움직이기','음식은 위생이 믿을 만한 곳에서, 이상 증상은 즉시 교사에게','길을 잃으면 혼자 찾아다니지 말고 모둠원·담임에게 먼저 연락','너울성 파도는 잔잔해 보여도 위험 — 물가·방파제에 가지 않기'],
@@ -273,7 +275,7 @@ const STAGES = [
     prompt:'방 안에서 위험한 것 4가지를 찾아보세요.',
     summary:['멀티탭 하나에 전열기구·충전기를 몰아 꽂지 않기(과열·화재)','이불 속·침대 위에서 충전하지 않기','창가·난간에 앉거나 기대지 않기','비상구와 문 앞은 늘 비워두기 — 소화기·비상구 위치는 입실하자마자 확인']},
 
-  { id:'S8', icon:'🔥', name:'한밤의 대피', badge:'대피 배지', type:'order',
+  { id:'S8', icon:'🔥', name:'한밤의 대피', cover:'s8', badge:'대피 배지', type:'order',
     story:'새벽 2시, 복도에서 비상벨이 울려요! 연기 냄새가 나기 시작했어요. 당황하지 말고 순서대로!',
     mission:'알맞은 순서대로 카드를 눌러 순서를 완성하세요. 순서가 틀리면 하트가 줄어요.',
     summary:['큰 소리로 알리고, 문을 열기 전에 손잡이 온도를 확인하기','젖은 수건으로 코·입을 막고 낮은 자세로 이동','엘리베이터는 절대 사용하지 않고 계단으로 대피','119에는 장소(호텔명·층)를 정확히, 상담원이 끊을 때까지 끊지 않기'],
@@ -352,7 +354,7 @@ function showIntro(){
   const grade = saved.grade || q.get('grade') || '2';
   const cls = saved.cls || q.get('class') || '';
   setScreen(
-    '<div class="hero"><div class="emojis">🚌 ⛵ 🏎️ 🚲 🏨</div><span class="school">청북고등학교 · 제주 수학여행 안전교육</span>' +
+    '<div class="hero"><img class="herop" src="hero.jpg" alt="제주 수학여행 안전 대탈출"><div class="emojis" style="display:none">🚌 ⛵ 🏎️ 🚲 🏨</div><span class="school">청북고등학교 · 제주 수학여행 안전교육</span>' +
     '<h1>제주 수학여행<br>안전 대탈출</h1><p>8개 장소에서 위험을 찾고 안전 배지를 모아<br>마지막 문을 열고 탈출하세요!</p></div>' +
     '<div class="card"><h2 style="font-size:1rem">게임 규칙</h2>' +
     '<div class="rules"><div class="rule"><b>❤️ 하트 5개</b>틀리면 1개씩 줄어요</div><div class="rule"><b>🔥 콤보</b>연속 정답이면 보너스</div>' +
@@ -386,7 +388,7 @@ function runStage(i){
   clearTimer(); G.idx = i; updateHud();
   const st = STAGES[i];
   const tag = st.type === 'final' ? 'FINAL' : 'STAGE ' + (i + 1) + ' / ' + TOTAL_STAGES;
-  setScreen('<div class="card si"><div class="big">' + st.icon + '</div><span class="tag">' + tag + '</span><h2>' + st.name + '</h2>' +
+  setScreen('<div class="card si">' + (st.cover ? '<img class="cover" src="' + st.cover + '.jpg" alt="" loading="eager">' : '<div class="big">' + st.icon + '</div>') + '<span class="tag">' + tag + '</span><h2>' + st.name + '</h2>' +
     '<div class="story">' + st.story + '</div><div class="mission">🎯 ' + st.mission + '</div>' +
     '<button class="btn" id="goBtn">도전 시작</button></div>');
   $('#goBtn').onclick = function(){ playStage(i); };
@@ -564,103 +566,49 @@ function hs(i, x, y, w, h, inner){
 const SCENES = {
   yacht: function(){
     const items = [
-      { risk:true,  x:30,  y:112, w:50,  h:72, label:'구명조끼 미착용', why:'승선 중에는 수영 실력과 관계없이 항상 구명조끼를 착용해야 해요.' },
-      { risk:true,  x:112, y:62,  w:56,  h:66, label:'난간 위에 앉아 몸 내밀기', why:'배가 한 번만 흔들려도 바다로 떨어질 수 있어요. 난간에 앉거나 기대지 않아요.' },
-      { risk:true,  x:262, y:94,  w:70,  h:78, label:'뱃머리 끝에서 팔 벌리기', why:'뱃머리 끝은 가장 많이 흔들리고 추락 위험이 큰 곳이에요.' },
-      { risk:true,  x:188, y:122, w:56,  h:66, label:'젖은 갑판에서 뛰기', why:'젖은 갑판은 매우 미끄러워요. 뛰면 넘어져 다치거나 바다로 미끄러질 수 있어요.' },
-      { risk:false, x:92,  y:160, w:56,  h:56, label:'', why:'구명조끼를 입고 앉아서 손잡이를 잡은 모습 — 안전한 행동이에요.' },
-      { risk:false, x:228, y:150, w:50,  h:70, label:'', why:'선원은 승객의 안전을 돕는 사람이에요 — 위험 행동이 아니에요.' }
+      { risk:true,  x:55,  y:225, w:150, h:430, label:'구명조끼 미착용', why:'승선 중에는 수영 실력과 관계없이 항상 구명조끼를 착용해야 해요.' },
+      { risk:true,  x:315, y:135, w:190, h:320, label:'난간 위에 앉아 몸 내밀기', why:'배가 한 번만 흔들려도 바다로 떨어질 수 있어요. 난간에 앉거나 기대지 않아요.' },
+      { risk:true,  x:940, y:110, w:240, h:285, label:'뱃머리 끝에서 팔 벌리기', why:'뱃머리 끝은 가장 많이 흔들리고 추락 위험이 큰 곳이에요.' },
+      { risk:true,  x:605, y:255, w:270, h:335, label:'젖은 갑판에서 뛰기', why:'젖은 갑판은 매우 미끄러워요. 뛰면 넘어져 다치거나 바다로 미끄러질 수 있어요.' },
+      { risk:false, x:335, y:420, w:260, h:350, label:'', why:'구명조끼를 입고 앉아서 손잡이를 잡은 모습 — 안전한 행동이에요.' },
+      { risk:false, x:880, y:290, w:120, h:400, label:'', why:'선원은 승객의 안전을 돕는 사람이에요 — 위험 행동이 아니에요.' }
     ];
-    let s = '<svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="요트 갑판 그림">' +
-      '<defs><linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#e0f2fe"/></linearGradient></defs>' +
-      '<rect width="360" height="240" fill="url(#sky1)"/><circle cx="300" cy="32" r="16" fill="#fde047"/>' +
-      '<ellipse cx="70" cy="34" rx="30" ry="9" fill="#fff" opacity=".85"/><ellipse cx="96" cy="28" rx="20" ry="8" fill="#fff" opacity=".85"/>' +
-      '<rect y="70" width="360" height="170" fill="#0ea5e9"/><path d="M0 84q20-8 40 0t40 0 40 0 40 0 40 0 40 0 40 0 40 0 40 0v10H0z" fill="#38bdf8"/>' +
-      '<path d="M0 232 L22 108 L318 108 L360 172 L342 232z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>' +
-      '<path d="M22 108 L318 108 L360 172 L0 172z" fill="#e2e8f0"/><rect x="0" y="172" width="360" height="12" fill="#94a3b8"/>' +
-      '<line x1="26" y1="108" x2="318" y2="108" stroke="#475569" stroke-width="3"/><line x1="318" y1="108" x2="352" y2="165" stroke="#475569" stroke-width="3"/>';
-    for (let k = 0; k < 8; k++) s += '<line x1="' + (30 + k * 38) + '" y1="108" x2="' + (30 + k * 38) + '" y2="126" stroke="#475569" stroke-width="2"/>';
-    s += '<ellipse cx="216" cy="190" rx="34" ry="7" fill="#7dd3fc" opacity=".7"/>';
-    s += hs(0, 30, 112, 50, 72, person(55, 180, { shirt:'#ef4444', pants:'#1e3a8a' }));
-    s += hs(1, 112, 62, 56, 66, person(140, 118, { shirt:'#a855f7', pose:'sit', arms:'forward' }) + '<rect x="156" y="82" width="9" height="14" rx="2" fill="#0f172a"/>');
-    s += hs(2, 262, 94, 70, 78, person(300, 168, { shirt:'#10b981', arms:'out', pants:'#0f172a' }));
-    s += hs(3, 188, 122, 56, 66, person(216, 184, { shirt:'#f59e0b', jump:true, arms:'out', pants:'#475569' }));
-    s += hs(4, 92, 160, 56, 56, person(116, 206, { shirt:'#3b82f6', pose:'sit', vest:true }));
-    s += hs(5, 228, 150, 50, 70, person(252, 196, { shirt:'#ffffff', cap:true, arms:'point', pants:'#0f172a' }));
-    s += '</svg>';
-    return { svg:s, items:items };
+    return { vw:1200, vh:805, svg: sceneSvg('yacht', '요트 갑판 그림', items), items:items };
   },
-
   rail: function(){
     const items = [
-      { risk:true,  x:178, y:92,  w:16,  h:90,  label:'앞차와 간격이 너무 좁음', why:'레일바이크는 브레이크를 잡아도 바로 서지 않아요. 앞차와는 항상 충분히 띄우고 달려요.' },
-      { risk:true,  x:120, y:70,  w:58,  h:112, label:'일어서서 페달 밟기', why:'달리는 중에 일어서면 균형을 잃고 떨어지거나 넘어질 수 있어요. 앉은 자세를 유지해요.' },
-      { risk:true,  x:194, y:78,  w:60,  h:104, label:'몸·팔을 밖으로 내밀어 촬영', why:'몸을 밖으로 내밀면 옆 구조물이나 앞차에 부딪히고 떨어질 수 있어요. 사진은 정차 후에 찍어요.' },
-      { risk:true,  x:254, y:78,  w:80,  h:104, label:'휴대폰 보며 브레이크 놓기', why:'앞을 보지 않고 브레이크를 잡을 수 없는 자세는 추돌 사고의 가장 큰 원인이에요.' },
-      { risk:false, x:6,   y:78,  w:104, h:104, label:'', why:'앉은 자세로 앞을 보고 손잡이를 잡은 모습 — 안전한 행동이에요.' },
-      { risk:false, x:6,   y:30,  w:40,  h:50,  label:'', why:'안전요원은 승객의 안전을 돕는 사람이에요 — 위험 행동이 아니에요.' }
+      { risk:true,  x:675, y:50, w:100, h:270, label:'앞차와 간격이 너무 좁음', why:'레일바이크는 브레이크를 잡아도 바로 서지 않아요. 앞차와는 항상 충분히 띄우고 달려요.' },
+      { risk:true,  x:545, y:70, w:115, h:210, label:'일어서서 페달 밟기', why:'달리는 중에 일어서면 균형을 잃고 떨어지거나 넘어질 수 있어요. 앉은 자세를 유지해요.' },
+      { risk:true,  x:780, y:95, w:160, h:180, label:'몸·팔을 밖으로 내밀어 촬영', why:'몸을 밖으로 내밀면 옆 구조물이나 앞차에 부딪히고 떨어질 수 있어요. 사진은 정차 후에 찍어요.' },
+      { risk:true,  x:1100, y:100, w:100, h:170, label:'휴대폰 보며 브레이크 놓기', why:'앞을 보지 않고 브레이크를 잡을 수 없는 자세는 추돌 사고의 가장 큰 원인이에요.' },
+      { risk:false, x:140, y:45, w:230, h:265, label:'', why:'앉은 자세로 앞을 보고 손잡이를 잡은 모습 — 안전한 행동이에요.' },
+      { risk:false, x:40,  y:85, w:65,  h:205, label:'', why:'안전요원은 승객의 안전을 돕는 사람이에요 — 위험 행동이 아니에요.' }
     ];
-    function car(x, w, canopy){
-      return '<rect x="' + x + '" y="132" width="' + w + '" height="34" rx="8" fill="#f97316"/><rect x="' + (x + 4) + '" y="138" width="' + (w - 8) + '" height="10" rx="4" fill="#fdba74"/>' +
-        '<circle cx="' + (x + 14) + '" cy="172" r="8" fill="#1f2937"/><circle cx="' + (x + w - 14) + '" cy="172" r="8" fill="#1f2937"/>' +
-        (canopy ? '<path d="M' + (x + 4) + ' 132 q' + (w / 2 - 4) + ' -64 ' + (w - 8) + ' 0" fill="#38bdf8" opacity=".25" stroke="#0369a1" stroke-width="2"/>' : '');
-    }
-    let s = '<svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="레일바이크 그림">' +
-      '<rect width="360" height="240" fill="#bae6fd"/><circle cx="318" cy="30" r="15" fill="#fde047"/><ellipse cx="120" cy="30" rx="34" ry="9" fill="#fff" opacity=".9"/>' +
-      '<path d="M0 112 Q70 60 150 100 T360 92 V200 H0z" fill="#86efac"/><path d="M0 128 Q90 90 190 122 T360 118 V200 H0z" fill="#4ade80"/>' +
-      '<rect y="186" width="360" height="54" fill="#a8a29e"/><rect y="184" width="360" height="4" fill="#57534e"/><rect y="196" width="360" height="4" fill="#57534e"/>';
-    for (let k = 0; k < 24; k++) s += '<rect x="' + (k * 16) + '" y="186" width="6" height="12" fill="#78716c"/>';
-    // 안전요원(안전 diversion)
-    s += hs(5, 6, 30, 40, 50, person(26, 92, { shirt:'#fde047', cap:true, arms:'point', pants:'#0f172a' }));
-    // 차량 A: 안전
-    s += hs(4, 6, 78, 104, 104, car(10, 96, true) + person(40, 140, { shirt:'#3b82f6', pose:'sit', arms:'forward' }) + person(72, 140, { shirt:'#ec4899', pose:'sit', arms:'forward' }));
-    // 차량 B: 서서 페달
-    s += hs(1, 120, 70, 64, 112, car(122, 60, true) + person(150, 132, { shirt:'#ef4444', arms:'out', pants:'#0f172a' }));
-    // B-C 간격
-    s += hs(0, 178, 92, 16, 90, '');
-    // 차량 C: 몸 내밀기
-    s += hs(2, 194, 78, 60, 104, car(186, 66, false) + person(218, 138, { shirt:'#a855f7', arms:'phone', pose:'stand' }));
-    // 차량 D: 휴대폰
-    s += hs(3, 254, 78, 80, 104, car(258, 70, false) + person(292, 140, { shirt:'#10b981', pose:'sit', arms:'forward' }) + '<rect x="306" y="104" width="10" height="16" rx="2" fill="#0f172a"/>');
-    s += '</svg>';
-    return { svg:s, items:items };
+    return { vw:1200, vh:400, svg: sceneSvg('rail', '레일바이크 그림', items, [0], 400), items:items };
   },
-
   room: function(){
     const items = [
-      { risk:true,  x:8,   y:106, w:102, h:86,  label:'이불 속에서 충전 중인 휴대폰', why:'이불 속은 열이 빠져나가지 못해 과열·화재 위험이 커요. 충전은 단단한 바닥 위에서 해요.' },
-      { risk:true,  x:222, y:108, w:92,  h:76,  label:'멀티탭 하나에 전열기구 몰아 꽂기', why:'허용 용량을 넘으면 과열돼 화재로 이어져요. 헤어드라이어 같은 전열기구는 한 번에 하나씩 써요.' },
-      { risk:true,  x:132, y:20,  w:70,  h:96,  label:'열린 창틀에 걸터앉기', why:'창가·난간에 앉거나 기대면 추락 사고로 이어져요. 높은 층에서는 더욱 위험해요.' },
-      { risk:true,  x:292, y:60,  w:62,  h:122, label:'비상구 앞을 짐으로 막기', why:'문 앞이 막히면 화재 때 탈출이 불가능해요. 문과 비상구 앞은 늘 비워 둬요.' },
-      { risk:false, x:236, y:30,  w:48,  h:36,  label:'', why:'비상구 표시등 — 위험이 아니라 탈출을 돕는 안전장치예요.' },
-      { risk:false, x:210, y:122, w:0,   h:0,   label:'', why:'' }
+      { risk:true,  x:170, y:515, w:180, h:120, label:'이불 속에서 충전 중인 휴대폰', why:'이불 속은 열이 빠져나가지 못해 과열·화재 위험이 커요. 충전은 단단한 바닥 위에서 해요.' },
+      { risk:true,  x:645, y:485, w:200, h:235, label:'멀티탭 하나에 전열기구 몰아 꽂기', why:'허용 용량을 넘으면 과열돼 화재로 이어져요. 헤어드라이어 같은 전열기구는 한 번에 하나씩 써요.' },
+      { risk:true,  x:440, y:260, w:200, h:310, label:'열린 창틀에 걸터앉기', why:'창가·난간에 앉거나 기대면 추락 사고로 이어져요. 높은 층에서는 더욱 위험해요.' },
+      { risk:true,  x:865, y:375, w:290, h:375, label:'비상구 앞을 짐으로 막기', why:'문 앞이 막히면 화재 때 탈출이 불가능해요. 문과 비상구 앞은 늘 비워 둬요.' },
+      { risk:false, x:955, y:100, w:125, h:65,  label:'', why:'비상구 표시등 — 위험이 아니라 탈출을 돕는 안전장치예요.' },
+      { risk:false, x:748, y:230, w:70,  h:140, label:'', why:'소화기 — 위험이 아니라 꼭 필요한 안전장치예요. 위치를 입실하자마자 확인해 두세요.' }
     ];
-    items.pop();
-    items.push({ risk:false, x:206, y:68, w:34, h:46, label:'', why:'소화기 — 위험이 아니라 꼭 필요한 안전장치예요. 위치를 입실하자마자 확인해 두세요.' });
-    let s = '<svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="숙소 방 그림">' +
-      '<rect width="360" height="240" fill="#1e293b"/><rect y="176" width="360" height="64" fill="#334155"/>' +
-      '<rect x="132" y="22" width="68" height="84" rx="4" fill="#0f172a" stroke="#94a3b8" stroke-width="3"/><circle cx="150" cy="44" r="2" fill="#fde047"/><circle cx="174" cy="60" r="1.5" fill="#fde047"/><circle cx="186" cy="38" r="2" fill="#fff"/>' +
-      '<rect x="136" y="26" width="30" height="76" fill="#1e293b" opacity=".6"/>';
-    // 침대 + 이불 속 충전
-    s += hs(0, 8, 106, 102, 86, '<rect x="10" y="150" width="100" height="40" rx="6" fill="#60a5fa"/><rect x="10" y="142" width="26" height="22" rx="6" fill="#e2e8f0"/><path d="M36 150 q35 -22 74 0 v26 H36z" fill="#93c5fd"/><rect x="62" y="152" width="16" height="9" rx="2" fill="#0f172a"/><rect x="63" y="153" width="14" height="7" rx="1" fill="#fde047" opacity=".9"/><path d="M78 156 h14 l-4 -6 h8" fill="none" stroke="#f97316" stroke-width="2"/>');
-    // 창 앞 학생
-    s += hs(2, 132, 20, 70, 96, person(168, 112, { shirt:'#f472b6', pose:'sit', arms:'forward' }) + '<rect x="130" y="104" width="76" height="6" fill="#94a3b8"/>');
-    // 소화기
-    s += hs(5, 206, 68, 34, 46, '<rect x="214" y="78" width="14" height="30" rx="5" fill="#dc2626"/><rect x="217" y="70" width="8" height="8" rx="2" fill="#0f172a"/><rect x="214" y="90" width="14" height="5" fill="#fff"/>');
-    // 비상구 표시
-    s += hs(4, 236, 30, 48, 36, '<rect x="238" y="32" width="44" height="22" rx="4" fill="#16a34a"/><text x="260" y="48" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" font-family="sans-serif">비상구</text>');
-    // 책상 + 멀티탭
-    s += hs(1, 222, 108, 92, 76, '<rect x="224" y="150" width="88" height="8" rx="2" fill="#a16207"/><rect x="230" y="158" width="6" height="30" fill="#78350f"/><rect x="300" y="158" width="6" height="30" fill="#78350f"/>' +
-      '<rect x="236" y="140" width="56" height="10" rx="3" fill="#e2e8f0"/><circle cx="246" cy="145" r="2" fill="#ef4444"/><circle cx="262" cy="145" r="2" fill="#ef4444"/><circle cx="278" cy="145" r="2" fill="#ef4444"/>' +
-      '<path d="M246 140 q-14 -22 -26 -4 M262 140 q0 -26 -10 -34 M278 140 q16 -24 30 -10" fill="none" stroke="#f97316" stroke-width="2.4"/>' +
-      '<rect x="296" y="116" width="26" height="14" rx="6" fill="#ec4899"/><rect x="290" y="122" width="12" height="5" fill="#475569"/>' +
-      '<text x="242" y="114" font-size="14" font-family="sans-serif">⚡</text>');
-    // 문 + 캐리어
-    s += hs(3, 292, 60, 62, 122, '<rect x="296" y="50" width="56" height="130" rx="3" fill="#92400e"/><circle cx="342" cy="118" r="2.6" fill="#fde047"/><rect x="298" y="130" width="38" height="30" rx="5" fill="#0ea5e9"/><rect x="308" y="108" width="34" height="24" rx="5" fill="#ef4444"/><rect x="312" y="156" width="36" height="24" rx="5" fill="#8b5cf6"/>');
-    s += '</svg>';
-    return { svg:s, items:items };
+    return { vw:1200, vh:805, svg: sceneSvg('room', '숙소 방 그림', items), items:items };
   }
 };
+// 사진(일러스트) 위에 투명 터치 영역을 얹는 방식. 좌표는 이미지 픽셀(1200x805) 기준.
+// last: 겹치는 영역에서 맨 위에 와야 하는 항목 번호들
+function sceneSvg(name, label, items, last, vh){
+  vh = vh || 805;
+  last = last || [];
+  const order = items.map(function(_, i){ return i; }).filter(function(i){ return last.indexOf(i) === -1; }).concat(last);
+  let s = '<svg viewBox="0 0 1200 ' + vh + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + label + '">' +
+    '<image href="' + name + '.jpg" x="0" y="0" width="1200" height="' + vh + '"/>';
+  order.forEach(function(i){ const it = items[i]; s += hs(i, it.x, it.y, it.w, it.h, ''); });
+  return s + '</svg>';
+}
 
 function playHidden(st, i){
   const sc = SCENES[st.scene](); const items = sc.items;
@@ -669,17 +617,17 @@ function playHidden(st, i){
     '<div class="tbar"><i id="tb"></i></div><p class="q" style="margin-top:0">' + st.prompt + '</p><div class="scene" id="scene">' + sc.svg + '</div>' +
     '<div class="findbar"><span>찾은 위험</span><span id="fc">0 / ' + need + '</span></div><ul class="foundlist" id="foundList"></ul>' +
     '<button class="btn ghost" id="hint">💡 힌트 (-30점, -10초)</button></div>');
-  const svg = $('#scene svg'); const NS = 'http://www.w3.org/2000/svg';
+  const svg = $('#scene svg'); const VW = sc.vw || 360, K = VW / 360; const NS = 'http://www.w3.org/2000/svg';
   const tb = $('#tb'); tb.style.transition = 'none'; tb.style.width = '100%';
   function mark(it, color, label, keep){
     const r = document.createElementNS(NS, 'rect');
     const x = it.x, y = it.y, w = it.w, h = it.h;
-    r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', w); r.setAttribute('height', h); r.setAttribute('rx', 8);
-    r.setAttribute('fill', 'none'); r.setAttribute('stroke', color); r.setAttribute('stroke-width', 3); r.setAttribute('pointer-events', 'none');
+    r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', w); r.setAttribute('height', h); r.setAttribute('rx', 8 * K);
+    r.setAttribute('fill', 'none'); r.setAttribute('stroke', color); r.setAttribute('stroke-width', 3 * K); r.setAttribute('pointer-events', 'none');
     svg.appendChild(r);
     let t = null;
-    if (label){ t = document.createElementNS(NS, 'text'); t.setAttribute('x', x + w / 2); t.setAttribute('y', Math.max(12, y - 4)); t.setAttribute('text-anchor', 'middle');
-      t.setAttribute('font-size', 11); t.setAttribute('font-weight', 800); t.setAttribute('fill', color); t.setAttribute('stroke', '#fff'); t.setAttribute('stroke-width', 3); t.setAttribute('paint-order', 'stroke');
+    if (label){ t = document.createElementNS(NS, 'text'); t.setAttribute('x', x + w / 2); t.setAttribute('y', Math.max(12 * K, y - 4 * K)); t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('font-size', 11 * K); t.setAttribute('font-weight', 800); t.setAttribute('fill', color); t.setAttribute('stroke', '#fff'); t.setAttribute('stroke-width', 3 * K); t.setAttribute('paint-order', 'stroke');
       t.setAttribute('pointer-events', 'none'); t.textContent = label; svg.appendChild(t); }
     if (!keep) setTimeout(function(){ r.remove(); if (t) t.remove(); }, 1100);
     return r;
