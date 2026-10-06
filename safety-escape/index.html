@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b4a6f">
+<title>제주 수학여행 안전 대탈출</title>
+<style>
+  :root{
+    --navy:#0b3b5c; --navy2:#0e5a85; --teal:#0e7490; --sky:#e0f2fe; --sky2:#bae6fd;
+    --accent:#f59e0b; --accent-d:#b45309; --ok:#16a34a; --ok-bg:#dcfce7; --bad:#dc2626; --bad-bg:#fee2e2;
+    --ink:#0f172a; --sub:#64748b; --line:#e2e8f0; --bg:#f1f5f9; --card:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;line-height:1.5}
+  body{min-height:100vh;min-height:100dvh}
+  #app{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+
+  /* HUD */
+  #hud{display:none;position:sticky;top:0;z-index:20;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:10px 14px 8px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+  #hud .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  #hud .hearts{font-size:1.05rem;letter-spacing:1px;min-width:92px}
+  #hud .score{font-weight:800;font-size:1rem}
+  #hud .score small{font-weight:600;opacity:.75;font-size:.68rem;margin-right:4px}
+  #hud .combo{font-size:.8rem;font-weight:800;background:rgba(255,255,255,.16);padding:2px 9px;border-radius:12px;min-width:64px;text-align:center}
+  #hud .combo.hot{background:var(--accent);color:#3b2300}
+  .dots{display:flex;gap:4px;margin-top:7px}
+  .dots i{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.25)}
+  .dots i.on{background:var(--accent)}
+  .dots i.cur{background:#fff}
+
+  #screen{flex:1;padding:14px 14px 28px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 16px;box-shadow:0 1px 3px rgba(15,23,42,.05);margin-bottom:12px}
+  h1{font-size:1.5rem;font-weight:900;line-height:1.25;letter-spacing:-.02em}
+  h2{font-size:1.2rem;font-weight:800;letter-spacing:-.01em}
+  p.sub{color:var(--sub);font-size:.86rem}
+
+  .btn{display:block;width:100%;border:none;border-radius:14px;padding:15px;font-size:1rem;font-weight:800;cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--teal),var(--navy2));box-shadow:0 8px 18px rgba(14,116,144,.28);margin-top:12px;font-family:inherit}
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.45;box-shadow:none;cursor:not-allowed}
+  .btn.ghost{background:#fff;color:var(--navy2);border:1.5px solid var(--sky2);box-shadow:none;padding:11px;font-size:.88rem;font-weight:700}
+  .btn.accent{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 8px 18px rgba(217,119,6,.28)}
+
+  /* intro */
+  .hero{background:linear-gradient(160deg,#0b3b5c 0%,#0e7490 60%,#38bdf8 100%);color:#fff;border-radius:22px;padding:26px 20px 22px;text-align:center;margin-bottom:12px;position:relative;overflow:hidden}
+  .hero .emojis{font-size:2rem;letter-spacing:4px;margin-bottom:10px}
+  .hero p{opacity:.9;font-size:.88rem;margin-top:8px}
+  .hero .school{display:inline-block;background:rgba(255,255,255,.18);border-radius:20px;padding:3px 12px;font-size:.74rem;font-weight:700;margin-bottom:10px}
+  .rules{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 2px}
+  .rule{background:var(--sky);border-radius:12px;padding:9px 10px;font-size:.78rem;color:#075985;font-weight:700}
+  .rule b{display:block;font-size:.95rem}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+  .f label{display:block;font-size:.72rem;font-weight:800;color:var(--sub);margin-bottom:4px}
+  .f input,.f select{width:100%;padding:11px 10px;border:1.5px solid var(--line);border-radius:10px;font-size:.95rem;font-family:inherit;background:#fff;color:var(--ink)}
+  .f input:focus,.f select:focus{outline:none;border-color:var(--teal)}
+  .f.wide{grid-column:1/-1}
+  .err{color:var(--bad);font-size:.8rem;font-weight:700;min-height:1.1em;margin-top:8px}
+  .note{font-size:.72rem;color:var(--sub);margin-top:10px;text-align:center}
+
+  /* stage intro */
+  .si{text-align:center}
+  .si .big{font-size:3.4rem;margin:2px 0 6px}
+  .tag{display:inline-block;background:var(--sky);color:#075985;font-weight:800;font-size:.72rem;padding:3px 11px;border-radius:12px;letter-spacing:.04em}
+  .si h2{margin:8px 0 8px}
+  .story{font-size:.92rem;color:#334155;text-align:left;background:#f8fafc;border-radius:12px;padding:12px 13px;margin-top:6px}
+  .mission{margin-top:10px;font-size:.88rem;font-weight:800;color:var(--accent-d);background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:10px 12px;text-align:left}
+
+  /* question */
+  .qhead{display:flex;justify-content:space-between;align-items:center;font-size:.8rem;font-weight:800;color:var(--sub);margin-bottom:8px}
+  .tm{background:var(--sky);color:#075985;padding:2px 10px;border-radius:12px;font-variant-numeric:tabular-nums}
+  .tm.low{background:var(--bad-bg);color:var(--bad)}
+  .tbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:12px}
+  .tbar i{display:block;height:100%;width:100%;background:var(--teal);transition:width 1s linear}
+  .q{font-size:1.02rem;font-weight:700;line-height:1.55;margin:4px 0 12px}
+  .scn{font-size:.9rem;color:#334155;background:#f8fafc;border-left:4px solid var(--teal);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+  .oxrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .oxbtn{border:2px solid var(--line);background:#fff;border-radius:16px;padding:18px 0;font-size:2.2rem;font-weight:900;cursor:pointer;font-family:inherit}
+  .oxbtn.o{color:#2563eb}.oxbtn.x{color:var(--bad)}
+  .opt{display:block;width:100%;text-align:left;border:2px solid var(--line);background:#fff;border-radius:14px;padding:13px 14px;margin-bottom:8px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);line-height:1.45}
+  .opt:disabled{cursor:default}
+  .opt.right,.oxbtn.right{border-color:var(--ok);background:var(--ok-bg)}
+  .opt.wrong,.oxbtn.wrong{border-color:var(--bad);background:var(--bad-bg)}
+  .opt.gone{opacity:.35;text-decoration:line-through}
+  .glow{animation:glow 1s ease-in-out infinite}
+  @keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.0)}50%{box-shadow:0 0 0 5px rgba(245,158,11,.45)}}
+  .explain{margin-top:10px;border-radius:12px;padding:11px 13px;font-size:.88rem;line-height:1.55}
+  .explain.good{background:var(--ok-bg);color:#14532d}
+  .explain.bad{background:var(--bad-bg);color:#7f1d1d}
+  .explain b{display:block;margin-bottom:2px}
+  .hintbox{background:#fffbeb;border:1px dashed #f59e0b;color:#78350f;border-radius:10px;padding:9px 12px;font-size:.84rem;margin-bottom:10px}
+
+  /* scene */
+  .scene{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#e0f2fe;touch-action:manipulation}
+  .scene svg{display:block;width:100%;height:auto}
+  .hs{cursor:pointer}
+  .findbar{display:flex;justify-content:space-between;align-items:center;margin:10px 2px 4px;font-size:.82rem;font-weight:800;color:var(--sub)}
+  .foundlist{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .foundlist li{background:var(--ok-bg);color:#14532d;border-radius:10px;padding:8px 11px;font-size:.82rem;line-height:1.45;animation:pop .35s ease}
+  .foundlist li b{display:block}
+  @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+  @keyframes pulse{0%,100%{opacity:.2}50%{opacity:1}}
+  .pulse{animation:pulse .7s ease-in-out infinite}
+
+  /* order */
+  .steps{display:flex;flex-direction:column;gap:8px}
+  .step{display:flex;gap:10px;align-items:flex-start;text-align:left;border:2px solid var(--line);background:#fff;border-radius:14px;padding:12px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink);line-height:1.45}
+  .step .n{flex:0 0 26px;height:26px;border-radius:50%;background:var(--line);color:var(--sub);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.8rem}
+  .step.done{border-color:var(--ok);background:var(--ok-bg)}
+  .step.done .n{background:var(--ok);color:#fff}
+  .step.shake{animation:shake .35s}
+  @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .pbar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:2px 0 12px}
+  .pbar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+
+  /* clear / result */
+  .clear{text-align:center}
+  .badge{font-size:4rem;animation:pop .5s ease}
+  .sum{text-align:left;margin-top:10px;background:#f8fafc;border-radius:12px;padding:11px 13px;font-size:.86rem}
+  .sum li{margin:4px 0 4px 16px}
+  .gain{display:inline-block;margin-top:8px;background:#fffbeb;color:var(--accent-d);font-weight:800;border-radius:12px;padding:4px 12px;font-size:.85rem}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+  .stat{background:var(--sky);border-radius:12px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:1.3rem;color:var(--navy)}
+  .stat span{font-size:.72rem;color:#075985;font-weight:700}
+  .badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0}
+  .badges span{background:#fffbeb;border:1px solid #fde68a;border-radius:20px;padding:3px 10px;font-size:.78rem;font-weight:700;color:var(--accent-d)}
+  canvas#cert{width:100%;height:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px;background:#fff}
+  .send{font-size:.8rem;font-weight:700;margin-top:8px;text-align:center}
+
+  /* overlay */
+  #overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  #overlay .box{background:#fff;border-radius:18px;padding:22px 18px 16px;max-width:380px;width:100%;text-align:center}
+  #overlay .box .em{font-size:2.6rem}
+  #overlay .box h3{margin:6px 0 6px;font-size:1.1rem}
+  #overlay .box p{font-size:.88rem;color:#334155}
+  #toast{position:fixed;left:50%;top:84px;transform:translateX(-50%) translateY(-12px);background:#0f172a;color:#fff;padding:10px 16px;border-radius:12px;font-size:.84rem;font-weight:700;opacity:0;pointer-events:none;transition:all .25s;z-index:60;max-width:90%;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.on-intro{top:20px}
+  .flash{animation:flash .45s}
+  @keyframes flash{0%{box-shadow:inset 0 0 0 100vmax rgba(220,38,38,.28)}100%{box-shadow:inset 0 0 0 100vmax rgba(220,38,38,0)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="row">
+      <div class="hearts" id="hHearts"></div>
+      <div class="combo" id="hCombo">COMBO 0</div>
+      <div class="score"><small>SCORE</small><span id="hScore">0</span></div>
+    </div>
+    <div class="dots" id="hDots"></div>
+  </div>
+  <div id="screen"></div>
+</div>
+<div id="overlay"><div class="box" id="overlayBox"></div></div>
+<div id="toast"></div>
+
+<script>
+// ★★★ EscapeScore.gs 를 배포해서 나온 /exec 주소를 아래 따옴표 안에 붙여넣으세요. ★★★
+// 비워두면 "연습 모드"로 동작하고, 점수는 선생님께 전달되지 않습니다.
+const SCORE_API_URL = "";
+
+/* ═════════════════════ 게임 데이터 ═════════════════════ */
+// 안전 수칙은 일반적인 안전 원칙 + 공개된 이용 기준을 바탕으로 했습니다.
+// 시설별 세부 규정(키·나이 기준, 보호장비 등)은 현장 안내와 인솔교사 지시가 항상 우선입니다.
+
+const TOTAL_STAGES = 8;
+
+const STAGES = [
+  { id:'S1', icon:'🚌', name:'출발! 이동 중 안전', badge:'안전벨트 배지', type:'ox', perQ:15,
+    story:'제주행 길, 버스와 공항 이동이 이어져요. 사고는 대개 "잠깐인데 뭐 어때" 하는 순간에 일어나요.',
+    mission:'O/X로 판단하세요. 문제당 15초! 틀리면 하트가 줄어요.',
+    summary:['달리는 버스에서는 자리에서 일어나지 않기','고속도로에서는 버스 모든 좌석에서도 안전띠 착용','비상구·통로는 짐으로 막지 않기, 비상구 위치는 미리 확인'],
+    qs:[
+      { id:'S1-Q1', q:'버스가 달리는 중에 짐을 꺼내거나 사진을 찍으려고 5초만 일어서는 건 괜찮다.', a:false,
+        hint:'급브레이크는 예고 없이 걸려요. 5초 사이에도요.',
+        why:'급제동 순간 몸이 앞으로 튕겨 나가 크게 다칠 수 있어요. 짐은 정차한 뒤에 꺼내요.' },
+      { id:'S1-Q2', q:'고속도로를 달리는 버스에서는 모든 좌석에서 안전띠를 매야 한다.', a:true,
+        hint:'"뒷자리·창가 자리라서 괜찮다"는 생각이 가장 위험해요.',
+        why:'고속도로·자동차전용도로에서는 버스도 전 좌석 안전띠 착용이 의무예요. 안전띠를 맨 사람과 안 맨 사람의 사고 피해는 크게 달라요.' },
+      { id:'S1-Q3', q:'버스를 타면 비상구 위치와 비상망치 위치를 먼저 확인해 두는 게 좋다.', a:true,
+        hint:'사고 때 연기·정전이 오면 처음 보는 장소는 못 찾아요.',
+        why:'사고 직후에는 당황해서 판단이 늦어져요. 미리 알아둔 비상구 위치가 탈출 시간을 줄여줘요.' },
+      { id:'S1-Q4', q:'큰 캐리어는 통로나 비상구 앞에 두는 게 가장 편하다.', a:false,
+        hint:'편한 것과 안전한 것은 달라요.',
+        why:'통로와 비상구가 막히면 비상시 탈출이 불가능해요. 짐은 짐칸이나 좌석 아래, 지정 위치에 둬요.' }
+    ]},
+
+  { id:'S2', icon:'⛵', name:'샹그릴라 요트 체험', badge:'구명조끼 배지', type:'hidden', time:90, scene:'yacht',
+    story:'요트가 항구를 벗어나 바다로 나왔어요. 신나는 마음에 몇몇 친구가 위험한 행동을 하고 있어요!',
+    mission:'갑판 그림에서 위험하게 행동하는 친구 4명을 찾아 누르세요. 안전한 사람을 누르면 하트가 줄어요.',
+    prompt:'갑판 위에서 위험하게 행동하는 친구 4명을 찾아보세요.',
+    summary:['구명조끼는 수영을 잘해도 승선하는 동안 계속 착용','난간에 앉거나 몸을 내밀지 않기 — 흔들림 한 번이면 바다로 떨어짐','뱃머리 끝, 젖은 갑판에서는 뛰지 않기','선원의 안내에 따라 지정된 곳에서만 움직이기']},
+
+  { id:'S3', icon:'🏎️', name:'9.81파크 레이싱 체험', badge:'규정 준수 배지', type:'choice',
+    story:'"중력 가속도 9.81"에서 이름을 딴 무동력 레이싱 체험! 속도가 붙으면 작은 실수가 큰 사고가 돼요.',
+    mission:'상황을 읽고 가장 안전한 행동을 고르세요. 시설별 기준은 현장 안내를 따르는 게 원칙이에요.',
+    summary:['탑승 기준(나이·키)은 그 차량의 안전장치가 맞게 설계된 범위 — 몰래 어기지 않기','앞차와는 항상 안전거리 유지, 추월·밀기 금지','사고가 나도 직원 신호 전에는 임의로 내리지 않기'],
+    qs:[
+      { id:'S3-Q1', scn:'친구가 "나 키가 딱 1cm 모자란데, 신발 안에 깔창 넣고 타면 되겠지?" 하며 탑승하려고 해요. (예: 1인승 차량은 만 14세 이상, 신장 150~190cm 기준으로 안내되는 경우가 있어요)',
+        q:'나의 가장 좋은 행동은?',
+        opts:['웃으면서 응원한다. 한 번쯤은 괜찮다.','기준은 안전장치에 맞춘 거라고 설명하고, 직원에게 탈 수 있는 다른 차량이나 체험을 물어보자고 한다.','직원이 안 볼 때 슬쩍 타라고 알려준다.','나도 같이 깔창을 넣는다.'],
+        ans:1, hint:'기준에는 이유가 있어요. 몸에 안 맞는 안전벨트는 제 기능을 못해요.',
+        why:'차량의 안전벨트·보호 구조는 정해진 체형 범위에 맞춰 설계돼요. 기준 미달로 타면 사고 때 벨트가 몸을 못 잡아줄 수 있어요. 직원에게 문의해 가능한 체험을 찾는 게 정답이에요.' },
+      { id:'S3-Q2', scn:'내 앞 차가 느리게 가요. 답답해서 속도를 더 내 추월하고 싶은 마음이 들어요.',
+        q:'어떻게 해야 할까요?',
+        opts:['앞차를 슬쩍 밀면서 비켜 달라고 한다.','코너에서 확 가속해서 추월한다.','안전거리를 유지하고, 안내된 규정과 직원 신호에 따라 주행한다.','내 헬멧만 쓰고 있으면 부딪혀도 괜찮다.'],
+        ans:2, hint:'"속도 경쟁"이 아니라 "안전하게 타는 체험"이에요.',
+        why:'추월 시도·접촉은 충돌과 전복으로 이어질 수 있어요. 안전거리와 규정, 직원 신호를 지키는 게 기본이에요.' },
+      { id:'S3-Q3', scn:'코스에서 앞 차가 갑자기 멈추거나 부딪혀 크게 흔들렸어요. 나도 겁이 나서 빨리 내리고 싶어요.',
+        q:'가장 안전한 행동은?',
+        opts:['벨트를 풀고 바로 뛰어내려 친구에게 간다.','감속·정지하고 자리에서 안전장비를 한 채로 직원의 안내를 기다린다.','손을 흔들며 뒤 차에게 신호를 보낸다.','코스를 가로질러 출구로 걸어간다.'],
+        ans:1, hint:'움직이는 코스 위에서 사람이 내리면 뒤 차에 가장 위험해요.',
+        why:'내가 코스에 내리는 순간 뒤따라오는 차에 치일 위험이 생겨요. 멈춘 뒤 직원 안내를 기다리는 게 원칙이에요.' }
+    ]},
+
+  { id:'S4', icon:'🎯', name:'아레나엑스 서바이벌', badge:'장비 수칙 배지', type:'ox', perQ:15,
+    story:'어두운 실내, 경보등과 스모그, 지뢰 장치까지! 몰입감이 높은 만큼 부딪히고 넘어지는 사고가 많아요.',
+    mission:'O/X로 판단하세요. 문제당 15초!',
+    summary:['실내 서바이벌은 뛰지 말고 시야를 확인하며 이동','장비 이상·불편·어지러움은 바로 중단하고 스태프에게 알리기','장비를 장난으로 얼굴에 겨누지 않기, 연출 장치는 만지지 않기'],
+    qs:[
+      { id:'S4-Q1', q:'조명이 어둡고 스모그가 있어도, 이기려면 최대한 빨리 뛰어다니는 게 맞다.', a:false,
+        hint:'시야가 좁을수록 속도를 줄여야 해요.',
+        why:'어둡고 장애물이 많은 실내에서 뛰면 친구와 부딪히거나 넘어지기 쉬워요. 걷듯이 이동하며 앞을 확인해요.' },
+      { id:'S4-Q2', q:'착용한 장비가 벗겨지거나 이상하면, 게임을 계속하지 말고 즉시 스태프에게 알려야 한다.', a:true,
+        hint:'"조금만 더 하고"가 사고를 만들어요.',
+        why:'장비가 제 위치에 없으면 부상 위험이 커지고 게임 규칙도 어긋나요. 즉시 멈추고 스태프 도움을 받아요.' },
+      { id:'S4-Q3', q:'실제 총이 아니니, 장난으로 친구 얼굴 가까이에 겨누는 것도 괜찮다.', a:false,
+        hint:'장난이 일상이 되면 눈 부상이 가장 먼저 와요.',
+        why:'실제 총이 아니어도 가까운 거리에서 얼굴을 겨누는 장난은 금지예요. 시설 규칙 위반은 퇴장 사유가 될 수 있고, 눈 부상 위험도 있어요.' },
+      { id:'S4-Q4', q:'지뢰 장치·경보등 같은 연출 설비는 궁금하면 가까이 가서 만져 봐도 된다.', a:false,
+        hint:'설비는 "구경거리"가 아니라 전기가 흐르는 기계예요.',
+        why:'연출 설비는 전기와 센서로 작동해요. 만지거나 분해하면 고장·감전·넘어짐 위험이 있어요.' }
+    ]},
+
+  { id:'S5', icon:'🚲', name:'제주 레일바이크', badge:'간격 유지 배지', type:'hidden', time:90, scene:'rail',
+    story:'레일 위를 달리는 자전거! 풍경에 취해 방심하면 앞뒤 차량과 부딪힐 수 있어요.',
+    mission:'레일 위 그림에서 위험하게 타고 있는 곳 4곳을 찾아 누르세요.',
+    prompt:'레일바이크에서 위험한 행동 4가지를 찾아보세요.',
+    summary:['앞차와는 항상 충분한 간격 유지 — 브레이크는 즉시 서지 않아요','달리는 중에는 앉은 자세 유지, 일어서지 않기','몸·팔을 밖으로 내밀어 촬영하지 않기','휴대폰은 정차 후, 브레이크를 잡을 수 있는 자세로']},
+
+  { id:'S6', icon:'🛍️', name:'올레시장 · 한담해변 자유시간', badge:'자유시간 배지', type:'choice',
+    story:'소지품 분실, 낯선 음식, 바닷가 사진 찍기 — 자유시간에 일어나는 일은 대부분 "혼자 판단"에서 시작돼요.',
+    mission:'상황을 읽고 가장 안전한 행동을 고르세요.',
+    summary:['귀중품은 몸 앞쪽에 두고, 모둠이 함께 움직이기','음식은 위생이 믿을 만한 곳에서, 이상 증상은 즉시 교사에게','길을 잃으면 혼자 찾아다니지 말고 모둠원·담임에게 먼저 연락','너울성 파도는 잔잔해 보여도 위험 — 물가·방파제에 가지 않기'],
+    qs:[
+      { id:'S6-Q1', scn:'사람이 많은 시장이에요. 지갑과 휴대폰이 뒷주머니와 가방 바깥 주머니에 들어 있어요.',
+        q:'가장 좋은 대비는?',
+        opts:['그대로 둔다. 설마 내 것만 가져가겠어?','귀중품은 몸 앞쪽·지퍼 안쪽에 두고, 모둠원과 가까이 붙어서 이동한다.','가방을 일부러 열어둬서 필요할 때 바로 꺼낸다.','지갑을 친구에게 몰아서 맡긴다.'],
+        ans:1, hint:'인파 속에서는 "손이 닿는 곳"이 곧 "가져갈 수 있는 곳"이에요.',
+        why:'붐비는 곳에서는 분실·소매치기 위험이 커요. 귀중품은 시야 안·몸 앞에 두고 모둠이 함께 움직이면 분실과 미아 모두를 막을 수 있어요.' },
+      { id:'S6-Q2', scn:'맛있어 보이는 해산물 가게예요. 그런데 진열대의 음식이 햇볕 아래 오래 놓여 있어요. 친구는 "싱싱해 보이니까 괜찮아"라며 먹자고 해요.',
+        q:'나의 선택은?',
+        opts:['보기에 괜찮으면 먹는다.','위생·보관 상태를 확인하고 불안하면 먹지 않는다. 먹은 뒤 배가 아프거나 두드러기가 나면 즉시 교사에게 알린다.','한 입만 먹어 보고 괜찮으면 더 먹는다.','불편해도 참고 아무에게도 말하지 않는다.'],
+        ans:1, hint:'"눈으로 봐서 괜찮음"은 안전 기준이 아니에요.',
+        why:'여행지에서 가장 흔한 사고가 식중독이에요. 상온에 오래 둔 음식은 피하고, 알레르기나 이상 증상은 숨기지 말고 바로 알려야 빨리 대처할 수 있어요.' },
+      { id:'S6-Q3', scn:'구경하다 보니 모둠 친구들과 떨어졌어요. 집합 시간은 20분 남았고, 휴대폰 배터리는 15%예요.',
+        q:'가장 먼저 할 일은?',
+        opts:['혼자 시장 전체를 뛰어다니며 찾는다.','모둠원과 담임에게 먼저 연락하고, 사람이 많고 밝은 곳에서 기다리거나 약속한 장소로 간다.','그냥 숙소에 혼자 간다.','연락하지 않고 집합 시간에만 맞춰 간다.'],
+        ans:1, hint:'움직일수록 서로 만나기 어려워져요.',
+        why:'서로 흩어지면 찾기 더 어려워져요. 먼저 연락 → 안전한 곳에서 대기 → 약속 장소로 이동이 기본이에요. 배터리도 아끼세요.' },
+      { id:'S6-Q4', scn:'한담해변! 파도가 잔잔해 보여요. 친구가 방파제 끝에서 인생샷을 찍자고 해요.',
+        q:'어떻게 해야 할까요?',
+        opts:['바다가 잔잔하니 잠깐은 괜찮다.','파도가 올 때만 피하면 된다.','물가·방파제·바위 근처에는 가지 않고, 안전한 거리에서 촬영한다.','신발만 벗고 들어가 본다.'],
+        ans:2, hint:'너울성 파도의 특징은 "잔잔해 보이다가 갑자기"예요.',
+        why:'너울성 파도는 먼바다의 에너지가 이동해 와서 잔잔한 날에도 갑자기 높은 물결이 덮칠 수 있어요. 방파제·갯바위·물가 접근 자체를 하지 않는 게 원칙이에요.' }
+    ]},
+
+  { id:'S7', icon:'🏨', name:'숙소 안전 점검', badge:'숙소 점검 배지', type:'hidden', time:90, scene:'room',
+    story:'밤 11시, 점호 직전! 방 안에서 화재·추락 위험이 될 만한 것들이 숨어 있어요.',
+    mission:'방 안 그림에서 위험한 것 4가지를 찾아 누르세요. 안전장치를 누르면 하트가 줄어요.',
+    prompt:'방 안에서 위험한 것 4가지를 찾아보세요.',
+    summary:['멀티탭 하나에 전열기구·충전기를 몰아 꽂지 않기(과열·화재)','이불 속·침대 위에서 충전하지 않기','창가·난간에 앉거나 기대지 않기','비상구와 문 앞은 늘 비워두기 — 소화기·비상구 위치는 입실하자마자 확인']},
+
+  { id:'S8', icon:'🔥', name:'한밤의 대피', badge:'대피 배지', type:'order',
+    story:'새벽 2시, 복도에서 비상벨이 울려요! 연기 냄새가 나기 시작했어요. 당황하지 말고 순서대로!',
+    mission:'알맞은 순서대로 카드를 눌러 순서를 완성하세요. 순서가 틀리면 하트가 줄어요.',
+    summary:['큰 소리로 알리고, 문을 열기 전에 손잡이 온도를 확인하기','젖은 수건으로 코·입을 막고 낮은 자세로 이동','엘리베이터는 절대 사용하지 않고 계단으로 대피','119에는 장소(호텔명·층)를 정확히, 상담원이 끊을 때까지 끊지 않기'],
+    parts:[
+      { id:'S8-A', title:'① 대피 순서를 완성하세요', why:'"불이야!"로 알리고 → 연기와 손잡이 온도로 상황을 판단 → 낮은 자세로 → 엘리베이터 말고 계단으로 → 안전한 곳에서 인원 확인과 119 신고 순서예요. 신고하느라 대피 시간을 놓치면 안 되니, 휴대폰이 있으면 이동 중이나 대피 직후 바로 신고해요.',
+        steps:['"불이야!" 크게 외치고 비상벨을 눌러 모두에게 알린다','문을 열기 전 손등으로 손잡이 온도를 확인하고, 연기 방향을 살핀다','젖은 수건으로 코와 입을 막고 낮은 자세로 이동한다','엘리베이터 대신 비상계단으로 내려간다','안전한 장소에서 인원을 확인하고 119에 위치를 정확히 알린다'] },
+      { id:'S8-B', title:'② 119 신고 순서를 완성하세요', why:'무슨 일인지 → 어디인지(호텔명·층) → 사람 상황 → 내 연락처 순서예요. 상담원이 끊으라고 할 때까지 먼저 끊지 않아야 구조대가 필요한 정보를 더 받을 수 있어요.',
+        steps:['"화재 신고입니다" — 무슨 일인지 먼저 말한다','장소: 호텔 이름·주소, 몇 층 몇 호인지 말한다','사람 상황: 불·연기 상태와 다친 사람이 있는지 알린다','내 이름·연락처를 말하고, 상담원이 끊으라고 할 때까지 끊지 않는다'] }
+    ]},
+
+  { id:'FINAL', icon:'🚪', name:'마지막 문', badge:'안전 지킴이', type:'final',
+    story:'마지막 문 앞! 문에는 6개의 안전 문장이 적혀 있어요. 모두 맞혀야 문이 열려요.',
+    mission:'6문제를 모두 맞히면 탈출 성공! 이 문제는 하트가 줄지 않으니 재도전할 수 있어요.',
+    summary:[],
+    qs:[
+      { id:'F-Q1', q:'수영을 잘하면 요트 위에서 구명조끼를 벗고 있어도 된다.', a:false, why:'배 위에서는 수영 실력과 관계없이 구명조끼를 입어요. 갑자기 떨어지면 당황하고, 차가운 바다에서는 힘이 금방 빠져요.' },
+      { id:'F-Q2', q:'너울성 파도는 바다가 잔잔해 보여도 갑자기 덮칠 수 있다.', a:true, why:'너울은 먼바다에서 만들어져 이동해 와요. 잔잔해 보여도 물가·방파제에는 가지 않아요.' },
+      { id:'F-Q3', q:'체험 시설의 탑승 기준(나이·키)은 안전을 위한 것이라 몰래 어기면 안 된다.', a:true, why:'안전장치가 정해진 체형에 맞게 설계되어 있어요. 기준 미달 상태로 타면 사고 때 오히려 더 크게 다칠 수 있어요.' },
+      { id:'F-Q4', q:'숙소 화재 때 빨리 내려가려면 엘리베이터를 타는 게 가장 좋다.', a:false, why:'화재 때 엘리베이터는 정전·연기 유입으로 갇힐 수 있어요. 반드시 계단으로 대피해요.' },
+      { id:'F-Q5', q:'자유시간에 모둠원과 떨어지면, 혼자 찾아다니기보다 먼저 연락하고 안전한 곳에서 기다린다.', a:true, why:'흩어질수록 만나기 어려워져요. 연락 → 안전한 곳 대기 → 약속 장소로 이동이 기본이에요.' },
+      { id:'F-Q6', q:'숙소 방에서는 멀티탭 하나에 헤어드라이어·전기장판·충전기를 모두 꽂아도 된다.', a:false, why:'허용 용량을 넘으면 과열되어 화재 위험이 커요. 전열기구는 한 번에 하나씩 쓰고, 이불 속 충전은 피해요.' }
+    ]}
+];
+
+/* ═════════════════════ 상태 · 유틸 ═════════════════════ */
+const $ = function(s){ return document.querySelector(s); };
+const G = { score:0, hearts:5, combo:0, maxCombo:0, hints:0, badges:[], wrong:[], start:0, idx:0, timer:null, sent:false, player:null };
+
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function setScreen(html){ $('#screen').innerHTML = html; window.scrollTo(0, 0); }
+function clearTimer(){ if (G.timer){ clearInterval(G.timer); G.timer = null; } }
+function vibrate(ms){ try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){} }
+let toastT = null;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove('show'); }, 2200); }
+function modal(html, onClose){
+  const o = $('#overlay'); $('#overlayBox').innerHTML = html; o.style.display = 'flex';
+  const b = $('#overlayBox').querySelector('button');
+  if (b) b.onclick = function(){ o.style.display = 'none'; if (onClose) onClose(); };
+}
+
+function updateHud(){
+  let h = ''; for (let i = 0; i < 5; i++) h += (i < G.hearts ? '❤️' : '🖤');
+  $('#hHearts').textContent = ''; $('#hHearts').innerHTML = h;
+  $('#hScore').textContent = G.score;
+  const c = $('#hCombo'); c.textContent = 'COMBO ' + G.combo; c.className = 'combo' + (G.combo >= 3 ? ' hot' : '');
+  let d = ''; for (let i = 0; i < TOTAL_STAGES; i++) d += '<i class="' + (i < G.badges.length ? 'on' : (i === G.idx ? 'cur' : '')) + '"></i>';
+  $('#hDots').innerHTML = d;
+}
+function addScore(n){ G.score = Math.max(0, G.score + n); updateHud(); }
+function comboBonus(){ return Math.min(G.combo, 5) * 10; }
+
+function logWrong(id, stageName, q){ G.wrong.push({ id:id, stage:stageName, q:String(q).slice(0, 120) }); }
+
+// 하트 감소. 하트가 0이 되면 true(게임오버 처리됨)
+function loseHeart(){
+  G.hearts = Math.max(0, G.hearts - 1); G.combo = 0; updateHud(); vibrate(120);
+  document.body.classList.remove('flash'); void document.body.offsetWidth; document.body.classList.add('flash');
+  if (G.hearts <= 0){ gameOver(); return true; }
+  return false;
+}
+function gameOver(){
+  clearTimer();
+  modal('<div class="em">💔</div><h3>하트를 모두 잃었어요</h3><p>이 미션을 다시 도전해요!<br><b>(-200점)</b></p><button class="btn accent">다시 도전</button>', function(){
+    G.score = Math.max(0, G.score - 200); G.hearts = 3; G.combo = 0; updateHud(); playStage(G.idx);
+  });
+}
+function useHint(){ G.hints++; addScore(-30); }
+
+/* ═════════════════════ 화면: 시작 ═════════════════════ */
+function showIntro(){
+  clearTimer();
+  $('#hud').style.display = 'none';
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem('safetyEscapePlayer') || '{}'); } catch(e){}
+  const q = new URLSearchParams(location.search);
+  const grade = saved.grade || q.get('grade') || '2';
+  const cls = saved.cls || q.get('class') || '';
+  setScreen(
+    '<div class="hero"><div class="emojis">🚌 ⛵ 🏎️ 🚲 🏨</div><span class="school">청북고등학교 · 제주 수학여행 안전교육</span>' +
+    '<h1>제주 수학여행<br>안전 대탈출</h1><p>8개 장소에서 위험을 찾고 안전 배지를 모아<br>마지막 문을 열고 탈출하세요!</p></div>' +
+    '<div class="card"><h2 style="font-size:1rem">게임 규칙</h2>' +
+    '<div class="rules"><div class="rule"><b>❤️ 하트 5개</b>틀리면 1개씩 줄어요</div><div class="rule"><b>🔥 콤보</b>연속 정답이면 보너스</div>' +
+    '<div class="rule"><b>⏱️ 제한시간</b>위험 찾기는 90초</div><div class="rule"><b>💡 힌트</b>쓰면 -30점</div></div>' +
+    '<div class="fgrid">' +
+    '<div class="f"><label>학년</label><select id="inGrade"><option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option></select></div>' +
+    '<div class="f"><label>반</label><input id="inCls" type="number" inputmode="numeric" min="1" max="20" placeholder="예: 3" value="' + esc(cls) + '"></div>' +
+    '<div class="f"><label>번호</label><input id="inNum" type="number" inputmode="numeric" min="1" max="50" placeholder="예: 12" value="' + esc(saved.num || '') + '"></div>' +
+    '<div class="f wide"><label>이름</label><input id="inName" type="text" maxlength="12" placeholder="이름" value="' + esc(saved.name || '') + '"></div></div>' +
+    '<div class="err" id="inErr"></div>' +
+    '<button class="btn" id="startBtn">탈출 시작!</button>' +
+    '<div class="note">입력한 반·번호·이름과 결과는 안전교육 확인용으로 선생님께만 전달돼요.</div></div>'
+  );
+  $('#inGrade').value = grade;
+  $('#startBtn').onclick = function(){
+    const p = { grade:$('#inGrade').value, cls:$('#inCls').value.trim(), num:$('#inNum').value.trim(), name:$('#inName').value.trim() };
+    if (!p.cls || !p.num || !p.name){ $('#inErr').textContent = '반, 번호, 이름을 모두 입력해 주세요.'; return; }
+    try { localStorage.setItem('safetyEscapePlayer', JSON.stringify(p)); } catch(e){}
+    startGame(p);
+  };
+}
+
+function startGame(player){
+  Object.assign(G, { score:0, hearts:5, combo:0, maxCombo:0, hints:0, badges:[], wrong:[], start:Date.now(), idx:0, sent:false, player:player });
+  $('#hud').style.display = 'block';
+  runStage(0);
+}
+
+/* ═════════════════════ 스테이지 공통 ═════════════════════ */
+function runStage(i){
+  clearTimer(); G.idx = i; updateHud();
+  const st = STAGES[i];
+  const tag = st.type === 'final' ? 'FINAL' : 'STAGE ' + (i + 1) + ' / ' + TOTAL_STAGES;
+  setScreen('<div class="card si"><div class="big">' + st.icon + '</div><span class="tag">' + tag + '</span><h2>' + st.name + '</h2>' +
+    '<div class="story">' + st.story + '</div><div class="mission">🎯 ' + st.mission + '</div>' +
+    '<button class="btn" id="goBtn">도전 시작</button></div>');
+  $('#goBtn').onclick = function(){ playStage(i); };
+}
+function playStage(i){
+  clearTimer(); G.idx = i; updateHud();
+  const st = STAGES[i];
+  if (st.type === 'ox') playOX(st, i);
+  else if (st.type === 'choice') playChoice(st, i);
+  else if (st.type === 'hidden') playHidden(st, i);
+  else if (st.type === 'order') playOrder(st, i);
+  else playFinal(st, i);
+}
+function stageClear(i, bonus){
+  clearTimer();
+  const st = STAGES[i];
+  if (G.badges.indexOf(st.id) === -1) G.badges.push(st.id);
+  updateHud();
+  const sum = st.summary.map(function(s){ return '<li>' + s + '</li>'; }).join('');
+  setScreen('<div class="card clear"><div class="badge">' + st.icon + '</div><span class="tag">' + st.badge + ' 획득!</span>' +
+    '<h2 style="margin-top:8px">' + st.name + ' 클리어</h2>' + (bonus ? '<div class="gain">⏱ 시간 보너스 +' + bonus + '</div>' : '') +
+    '<div class="sum"><b>오늘 기억할 안전 포인트</b><ul>' + sum + '</ul></div>' +
+    '<button class="btn" id="nextBtn">' + (i === TOTAL_STAGES - 1 ? '마지막 문으로 ▶' : '다음 장소로 ▶') + '</button></div>');
+  $('#nextBtn').onclick = function(){ runStage(i + 1); };
+}
+
+/* ═════════════════════ O / X ═════════════════════ */
+function playOX(st, i){
+  const qs = shuffle(st.qs); let qi = 0, hintShown = false;
+  function render(){
+    const q = qs[qi]; hintShown = false; let left = st.perQ; let answered = false;
+    setScreen('<div class="card"><div class="qhead"><span>' + st.icon + ' ' + st.name + ' · ' + (qi + 1) + '/' + qs.length + '</span><span class="tm" id="tm">⏱ ' + left + '</span></div>' +
+      '<div class="tbar"><i id="tb"></i></div><div id="hintArea"></div><p class="q">' + q.q + '</p>' +
+      '<div class="oxrow"><button class="oxbtn o" id="bo">O</button><button class="oxbtn x" id="bx">X</button></div>' +
+      '<div id="result"></div><button class="btn ghost" id="hint">💡 힌트 (-30점, -10초)</button></div>');
+    requestAnimationFrame(function(){ const tb = $('#tb'); if (tb) tb.style.width = '0%'; });
+    const tb = $('#tb'); tb.style.transition = 'width ' + left + 's linear';
+    function finish(choice, timedOut){
+      if (answered) return; answered = true; clearTimer();
+      const ok = (choice === q.a); const bo = $('#bo'), bx = $('#bx'); bo.disabled = bx.disabled = true; $('#hint').style.display = 'none';
+      (q.a ? bo : bx).classList.add('right');
+      let dead = false, gain = 0;
+      if (ok){ G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); gain = 100 + comboBonus() + Math.max(0, left) * 2; addScore(gain); }
+      else { (choice === true ? bo : bx).classList.add('wrong'); logWrong(q.id, st.name, q.q); dead = loseHeart(); }
+      if (dead) return;
+      $('#result').innerHTML = '<div class="explain ' + (ok ? 'good' : 'bad') + '"><b>' + (ok ? '정답! +' + gain : (timedOut ? '시간 초과!' : '아쉬워요!') + ' 하트 -1') + '</b>' + q.why + '</div>' +
+        '<button class="btn" id="nx">' + (qi === qs.length - 1 ? '결과 보기' : '다음 문제') + '</button>';
+      $('#nx').onclick = function(){ qi++; if (qi >= qs.length) stageClear(i, 0); else render(); };
+    }
+    $('#bo').onclick = function(){ finish(true); };
+    $('#bx').onclick = function(){ finish(false); };
+    $('#hint').onclick = function(){
+      if (hintShown || answered) return; hintShown = true; useHint(); left = Math.max(1, left - 10);
+      $('#hintArea').innerHTML = '<div class="hintbox">💡 ' + q.hint + '</div>'; $('#hint').disabled = true;
+    };
+    G.timer = setInterval(function(){
+      left--; const tm = $('#tm'); if (tm){ tm.textContent = '⏱ ' + Math.max(0, left); tm.className = 'tm' + (left <= 5 ? ' low' : ''); }
+      if (left <= 0) finish(!q.a, true);
+    }, 1000);
+  }
+  render();
+}
+
+/* ═════════════════════ 상황 선택형 ═════════════════════ */
+function playChoice(st, i){
+  const qs = st.qs; let qi = 0;
+  function render(){
+    const q = qs[qi]; let hinted = false, answered = false;
+    const order = shuffle(q.opts.map(function(t, k){ return { t:t, ok:(k === q.ans) }; }));
+    setScreen('<div class="card"><div class="qhead"><span>' + st.icon + ' ' + st.name + ' · ' + (qi + 1) + '/' + qs.length + '</span></div>' +
+      '<div class="scn">' + q.scn + '</div><p class="q">' + q.q + '</p><div id="hintArea"></div><div id="opts"></div><div id="result"></div>' +
+      '<button class="btn ghost" id="hint">💡 힌트 (-30점) — 오답 하나 지우기</button></div>');
+    const box = $('#opts');
+    order.forEach(function(o, k){
+      const b = document.createElement('button'); b.className = 'opt'; b.textContent = o.t; b.dataset.k = k;
+      b.onclick = function(){ pick(k); }; box.appendChild(b);
+    });
+    function pick(k){
+      if (answered) return; answered = true;
+      const btns = box.querySelectorAll('.opt'); btns.forEach(function(b){ b.disabled = true; });
+      $('#hint').style.display = 'none';
+      const ok = order[k].ok; let dead = false, gain = 0;
+      order.forEach(function(o, n){ if (o.ok) btns[n].classList.add('right'); });
+      if (ok){ G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); gain = 100 + comboBonus(); addScore(gain); }
+      else { btns[k].classList.add('wrong'); logWrong(q.id, st.name, q.scn.slice(0, 40) + ' / ' + q.q); dead = loseHeart(); }
+      if (dead) return;
+      $('#result').innerHTML = '<div class="explain ' + (ok ? 'good' : 'bad') + '"><b>' + (ok ? '정답! +' + gain : '아쉬워요! 하트 -1') + '</b>' + q.why + '</div>' +
+        '<button class="btn" id="nx">' + (qi === qs.length - 1 ? '결과 보기' : '다음 문제') + '</button>';
+      $('#nx').onclick = function(){ qi++; if (qi >= qs.length) stageClear(i, 0); else render(); };
+    }
+    $('#hint').onclick = function(){
+      if (hinted || answered) return; hinted = true; useHint();
+      const wrongIdx = []; order.forEach(function(o, n){ if (!o.ok) wrongIdx.push(n); });
+      const kill = wrongIdx[Math.floor(Math.random() * wrongIdx.length)];
+      const b = box.querySelectorAll('.opt')[kill]; b.classList.add('gone'); b.disabled = true;
+      $('#hintArea').innerHTML = '<div class="hintbox">💡 ' + q.hint + '</div>'; $('#hint').disabled = true;
+    };
+  }
+  render();
+}
+
+/* ═════════════════════ 순서 맞추기 ═════════════════════ */
+function playOrder(st, i){
+  let pi = 0;
+  function render(){
+    const part = st.parts[pi]; let next = 0, done = false;
+    const cards = shuffle(part.steps.map(function(t, k){ return { t:t, k:k }; }));
+    setScreen('<div class="card"><div class="qhead"><span>' + st.icon + ' ' + st.name + ' · ' + (pi + 1) + '/' + st.parts.length + '</span></div>' +
+      '<p class="q">' + part.title + '</p><div class="pbar"><i id="pb"></i></div><div class="steps" id="steps"></div><div id="result"></div>' +
+      '<button class="btn ghost" id="hint">💡 힌트 (-30점) — 다음 순서 알려주기</button></div>');
+    const box = $('#steps');
+    cards.forEach(function(c){
+      const b = document.createElement('button'); b.className = 'step'; b.innerHTML = '<span class="n">·</span><span></span>';
+      b.lastChild.textContent = c.t; b.dataset.k = c.k;
+      b.onclick = function(){
+        if (done || b.classList.contains('done')) return;
+        if (c.k === next){
+          next++; b.classList.add('done'); b.firstChild.textContent = next; b.classList.remove('glow');
+          G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); addScore(50);
+          $('#pb').style.width = (next / part.steps.length * 100) + '%';
+          box.querySelectorAll('.step').forEach(function(s){ s.style.outline = ''; });
+          if (next === part.steps.length){
+            done = true; addScore(100); $('#hint').style.display = 'none';
+            $('#result').innerHTML = '<div class="explain good"><b>순서 완성! +100</b>' + part.why + '</div>' +
+              '<button class="btn" id="nx">' + (pi === st.parts.length - 1 ? '결과 보기' : '다음 순서 ▶') + '</button>';
+            $('#nx').onclick = function(){ pi++; if (pi >= st.parts.length) stageClear(i, 0); else render(); };
+          }
+        } else {
+          b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+          logWrong(part.id, st.name, part.title + ' (' + (next + 1) + '번째 순서 오답)');
+          if (loseHeart()) return;
+          toast('순서가 달라요! 하트 -1');
+        }
+      };
+      box.appendChild(b);
+    });
+    $('#hint').onclick = function(){
+      if (done) return; useHint();
+      box.querySelectorAll('.step').forEach(function(s){ if (+s.dataset.k === next) s.classList.add('glow'); });
+      toast('💡 다음 순서 카드가 깜빡여요 (-30점)');
+    };
+  }
+  render();
+}
+
+/* ═════════════════════ 위험 찾기 (숨은 그림) ═════════════════════ */
+function person(x, y, o){
+  o = o || {}; const sk = '#fcd5b0', sh = o.shirt || '#60a5fa', pn = o.pants || '#334155', hair = o.hair || '#1f2937'; let s = '';
+  const pose = o.pose || 'stand';
+  if (pose === 'sit'){
+    s += '<rect x="' + (x - 7) + '" y="' + (y - 32) + '" width="14" height="22" rx="5" fill="' + sh + '"/>';
+    s += '<circle cx="' + x + '" cy="' + (y - 40) + '" r="7" fill="' + sk + '"/><path d="M' + (x - 7) + ' ' + (y - 41) + 'a7 7 0 0 1 14 0z" fill="' + hair + '"/>';
+    s += '<rect x="' + (x - 6) + '" y="' + (y - 12) + '" width="22" height="7" rx="3" fill="' + pn + '"/><rect x="' + (x + 10) + '" y="' + (y - 12) + '" width="7" height="16" rx="3" fill="' + pn + '"/>';
+    if (o.vest) s += '<rect x="' + (x - 7) + '" y="' + (y - 30) + '" width="14" height="16" rx="4" fill="#f97316"/><rect x="' + (x - 1) + '" y="' + (y - 30) + '" width="2" height="16" fill="#fff"/>';
+    if (o.arms === 'forward') s += '<line x1="' + x + '" y1="' + (y - 26) + '" x2="' + (x + 18) + '" y2="' + (y - 24) + '" stroke="' + sk + '" stroke-width="4" stroke-linecap="round"/>';
+    return s;
+  }
+  const dy = o.jump ? -8 : 0; y += dy;
+  s += '<rect x="' + (x - 6) + '" y="' + (y - 14) + '" width="5" height="' + (14 - dy) + '" rx="2" fill="' + pn + '"/><rect x="' + (x + 1) + '" y="' + (y - 14) + '" width="5" height="' + (14 - dy) + '" rx="2" fill="' + pn + '"/>';
+  s += '<rect x="' + (x - 8) + '" y="' + (y - 38) + '" width="16" height="25" rx="6" fill="' + sh + '"/>';
+  if (o.vest) s += '<rect x="' + (x - 8) + '" y="' + (y - 36) + '" width="16" height="20" rx="5" fill="#f97316"/><rect x="' + (x - 1) + '" y="' + (y - 36) + '" width="2" height="20" fill="#fff"/>';
+  s += '<circle cx="' + x + '" cy="' + (y - 46) + '" r="7.5" fill="' + sk + '"/><path d="M' + (x - 7.5) + ' ' + (y - 47) + 'a7.5 7.5 0 0 1 15 0z" fill="' + hair + '"/>';
+  if (o.cap) s += '<rect x="' + (x - 9) + '" y="' + (y - 56) + '" width="18" height="6" rx="3" fill="#0f172a"/>';
+  const a = o.arms || 'down';
+  if (a === 'out') s += '<line x1="' + (x - 8) + '" y1="' + (y - 33) + '" x2="' + (x - 26) + '" y2="' + (y - 36) + '" stroke="' + sk + '" stroke-width="4" stroke-linecap="round"/><line x1="' + (x + 8) + '" y1="' + (y - 33) + '" x2="' + (x + 26) + '" y2="' + (y - 36) + '" stroke="' + sk + '" stroke-width="4" stroke-linecap="round"/>';
+  else if (a === 'phone') s += '<line x1="' + (x + 8) + '" y1="' + (y - 33) + '" x2="' + (x + 20) + '" y2="' + (y - 50) + '" stroke="' + sk + '" stroke-width="4" stroke-linecap="round"/><rect x="' + (x + 17) + '" y="' + (y - 62) + '" width="8" height="13" rx="2" fill="#0f172a"/>';
+  else if (a === 'point') s += '<line x1="' + (x + 8) + '" y1="' + (y - 33) + '" x2="' + (x + 24) + '" y2="' + (y - 38) + '" stroke="' + sk + '" stroke-width="4" stroke-linecap="round"/>';
+  else s += '<line x1="' + (x - 8) + '" y1="' + (y - 32) + '" x2="' + (x - 11) + '" y2="' + (y - 20) + '" stroke="' + sk + '" stroke-width="4" stroke-linecap="round"/><line x1="' + (x + 8) + '" y1="' + (y - 32) + '" x2="' + (x + 11) + '" y2="' + (y - 20) + '" stroke="' + sk + '" stroke-width="4" stroke-linecap="round"/>';
+  return s;
+}
+function hs(i, x, y, w, h, inner){
+  return '<g class="hs" data-i="' + i + '">' + inner + '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="#fff" fill-opacity="0.001"/></g>';
+}
+
+const SCENES = {
+  yacht: function(){
+    const items = [
+      { risk:true,  x:30,  y:112, w:50,  h:72, label:'구명조끼 미착용', why:'승선 중에는 수영 실력과 관계없이 항상 구명조끼를 착용해야 해요.' },
+      { risk:true,  x:112, y:62,  w:56,  h:66, label:'난간 위에 앉아 몸 내밀기', why:'배가 한 번만 흔들려도 바다로 떨어질 수 있어요. 난간에 앉거나 기대지 않아요.' },
+      { risk:true,  x:262, y:94,  w:70,  h:78, label:'뱃머리 끝에서 팔 벌리기', why:'뱃머리 끝은 가장 많이 흔들리고 추락 위험이 큰 곳이에요.' },
+      { risk:true,  x:188, y:122, w:56,  h:66, label:'젖은 갑판에서 뛰기', why:'젖은 갑판은 매우 미끄러워요. 뛰면 넘어져 다치거나 바다로 미끄러질 수 있어요.' },
+      { risk:false, x:92,  y:160, w:56,  h:56, label:'', why:'구명조끼를 입고 앉아서 손잡이를 잡은 모습 — 안전한 행동이에요.' },
+      { risk:false, x:228, y:150, w:50,  h:70, label:'', why:'선원은 승객의 안전을 돕는 사람이에요 — 위험 행동이 아니에요.' }
+    ];
+    let s = '<svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="요트 갑판 그림">' +
+      '<defs><linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#e0f2fe"/></linearGradient></defs>' +
+      '<rect width="360" height="240" fill="url(#sky1)"/><circle cx="300" cy="32" r="16" fill="#fde047"/>' +
+      '<ellipse cx="70" cy="34" rx="30" ry="9" fill="#fff" opacity=".85"/><ellipse cx="96" cy="28" rx="20" ry="8" fill="#fff" opacity=".85"/>' +
+      '<rect y="70" width="360" height="170" fill="#0ea5e9"/><path d="M0 84q20-8 40 0t40 0 40 0 40 0 40 0 40 0 40 0 40 0 40 0v10H0z" fill="#38bdf8"/>' +
+      '<path d="M0 232 L22 108 L318 108 L360 172 L342 232z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>' +
+      '<path d="M22 108 L318 108 L360 172 L0 172z" fill="#e2e8f0"/><rect x="0" y="172" width="360" height="12" fill="#94a3b8"/>' +
+      '<line x1="26" y1="108" x2="318" y2="108" stroke="#475569" stroke-width="3"/><line x1="318" y1="108" x2="352" y2="165" stroke="#475569" stroke-width="3"/>';
+    for (let k = 0; k < 8; k++) s += '<line x1="' + (30 + k * 38) + '" y1="108" x2="' + (30 + k * 38) + '" y2="126" stroke="#475569" stroke-width="2"/>';
+    s += '<ellipse cx="216" cy="190" rx="34" ry="7" fill="#7dd3fc" opacity=".7"/>';
+    s += hs(0, 30, 112, 50, 72, person(55, 180, { shirt:'#ef4444', pants:'#1e3a8a' }));
+    s += hs(1, 112, 62, 56, 66, person(140, 118, { shirt:'#a855f7', pose:'sit', arms:'forward' }) + '<rect x="156" y="82" width="9" height="14" rx="2" fill="#0f172a"/>');
+    s += hs(2, 262, 94, 70, 78, person(300, 168, { shirt:'#10b981', arms:'out', pants:'#0f172a' }));
+    s += hs(3, 188, 122, 56, 66, person(216, 184, { shirt:'#f59e0b', jump:true, arms:'out', pants:'#475569' }));
+    s += hs(4, 92, 160, 56, 56, person(116, 206, { shirt:'#3b82f6', pose:'sit', vest:true }));
+    s += hs(5, 228, 150, 50, 70, person(252, 196, { shirt:'#ffffff', cap:true, arms:'point', pants:'#0f172a' }));
+    s += '</svg>';
+    return { svg:s, items:items };
+  },
+
+  rail: function(){
+    const items = [
+      { risk:true,  x:178, y:92,  w:16,  h:90,  label:'앞차와 간격이 너무 좁음', why:'레일바이크는 브레이크를 잡아도 바로 서지 않아요. 앞차와는 항상 충분히 띄우고 달려요.' },
+      { risk:true,  x:120, y:70,  w:58,  h:112, label:'일어서서 페달 밟기', why:'달리는 중에 일어서면 균형을 잃고 떨어지거나 넘어질 수 있어요. 앉은 자세를 유지해요.' },
+      { risk:true,  x:194, y:78,  w:60,  h:104, label:'몸·팔을 밖으로 내밀어 촬영', why:'몸을 밖으로 내밀면 옆 구조물이나 앞차에 부딪히고 떨어질 수 있어요. 사진은 정차 후에 찍어요.' },
+      { risk:true,  x:254, y:78,  w:80,  h:104, label:'휴대폰 보며 브레이크 놓기', why:'앞을 보지 않고 브레이크를 잡을 수 없는 자세는 추돌 사고의 가장 큰 원인이에요.' },
+      { risk:false, x:6,   y:78,  w:104, h:104, label:'', why:'앉은 자세로 앞을 보고 손잡이를 잡은 모습 — 안전한 행동이에요.' },
+      { risk:false, x:6,   y:30,  w:40,  h:50,  label:'', why:'안전요원은 승객의 안전을 돕는 사람이에요 — 위험 행동이 아니에요.' }
+    ];
+    function car(x, w, canopy){
+      return '<rect x="' + x + '" y="132" width="' + w + '" height="34" rx="8" fill="#f97316"/><rect x="' + (x + 4) + '" y="138" width="' + (w - 8) + '" height="10" rx="4" fill="#fdba74"/>' +
+        '<circle cx="' + (x + 14) + '" cy="172" r="8" fill="#1f2937"/><circle cx="' + (x + w - 14) + '" cy="172" r="8" fill="#1f2937"/>' +
+        (canopy ? '<path d="M' + (x + 4) + ' 132 q' + (w / 2 - 4) + ' -64 ' + (w - 8) + ' 0" fill="#38bdf8" opacity=".25" stroke="#0369a1" stroke-width="2"/>' : '');
+    }
+    let s = '<svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="레일바이크 그림">' +
+      '<rect width="360" height="240" fill="#bae6fd"/><circle cx="318" cy="30" r="15" fill="#fde047"/><ellipse cx="120" cy="30" rx="34" ry="9" fill="#fff" opacity=".9"/>' +
+      '<path d="M0 112 Q70 60 150 100 T360 92 V200 H0z" fill="#86efac"/><path d="M0 128 Q90 90 190 122 T360 118 V200 H0z" fill="#4ade80"/>' +
+      '<rect y="186" width="360" height="54" fill="#a8a29e"/><rect y="184" width="360" height="4" fill="#57534e"/><rect y="196" width="360" height="4" fill="#57534e"/>';
+    for (let k = 0; k < 24; k++) s += '<rect x="' + (k * 16) + '" y="186" width="6" height="12" fill="#78716c"/>';
+    // 안전요원(안전 diversion)
+    s += hs(5, 6, 30, 40, 50, person(26, 92, { shirt:'#fde047', cap:true, arms:'point', pants:'#0f172a' }));
+    // 차량 A: 안전
+    s += hs(4, 6, 78, 104, 104, car(10, 96, true) + person(40, 140, { shirt:'#3b82f6', pose:'sit', arms:'forward' }) + person(72, 140, { shirt:'#ec4899', pose:'sit', arms:'forward' }));
+    // 차량 B: 서서 페달
+    s += hs(1, 120, 70, 64, 112, car(122, 60, true) + person(150, 132, { shirt:'#ef4444', arms:'out', pants:'#0f172a' }));
+    // B-C 간격
+    s += hs(0, 178, 92, 16, 90, '');
+    // 차량 C: 몸 내밀기
+    s += hs(2, 194, 78, 60, 104, car(186, 66, false) + person(218, 138, { shirt:'#a855f7', arms:'phone', pose:'stand' }));
+    // 차량 D: 휴대폰
+    s += hs(3, 254, 78, 80, 104, car(258, 70, false) + person(292, 140, { shirt:'#10b981', pose:'sit', arms:'forward' }) + '<rect x="306" y="104" width="10" height="16" rx="2" fill="#0f172a"/>');
+    s += '</svg>';
+    return { svg:s, items:items };
+  },
+
+  room: function(){
+    const items = [
+      { risk:true,  x:8,   y:106, w:102, h:86,  label:'이불 속에서 충전 중인 휴대폰', why:'이불 속은 열이 빠져나가지 못해 과열·화재 위험이 커요. 충전은 단단한 바닥 위에서 해요.' },
+      { risk:true,  x:222, y:108, w:92,  h:76,  label:'멀티탭 하나에 전열기구 몰아 꽂기', why:'허용 용량을 넘으면 과열돼 화재로 이어져요. 헤어드라이어 같은 전열기구는 한 번에 하나씩 써요.' },
+      { risk:true,  x:132, y:20,  w:70,  h:96,  label:'열린 창틀에 걸터앉기', why:'창가·난간에 앉거나 기대면 추락 사고로 이어져요. 높은 층에서는 더욱 위험해요.' },
+      { risk:true,  x:292, y:60,  w:62,  h:122, label:'비상구 앞을 짐으로 막기', why:'문 앞이 막히면 화재 때 탈출이 불가능해요. 문과 비상구 앞은 늘 비워 둬요.' },
+      { risk:false, x:236, y:30,  w:48,  h:36,  label:'', why:'비상구 표시등 — 위험이 아니라 탈출을 돕는 안전장치예요.' },
+      { risk:false, x:210, y:122, w:0,   h:0,   label:'', why:'' }
+    ];
+    items.pop();
+    items.push({ risk:false, x:206, y:68, w:34, h:46, label:'', why:'소화기 — 위험이 아니라 꼭 필요한 안전장치예요. 위치를 입실하자마자 확인해 두세요.' });
+    let s = '<svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="숙소 방 그림">' +
+      '<rect width="360" height="240" fill="#1e293b"/><rect y="176" width="360" height="64" fill="#334155"/>' +
+      '<rect x="132" y="22" width="68" height="84" rx="4" fill="#0f172a" stroke="#94a3b8" stroke-width="3"/><circle cx="150" cy="44" r="2" fill="#fde047"/><circle cx="174" cy="60" r="1.5" fill="#fde047"/><circle cx="186" cy="38" r="2" fill="#fff"/>' +
+      '<rect x="136" y="26" width="30" height="76" fill="#1e293b" opacity=".6"/>';
+    // 침대 + 이불 속 충전
+    s += hs(0, 8, 106, 102, 86, '<rect x="10" y="150" width="100" height="40" rx="6" fill="#60a5fa"/><rect x="10" y="142" width="26" height="22" rx="6" fill="#e2e8f0"/><path d="M36 150 q35 -22 74 0 v26 H36z" fill="#93c5fd"/><rect x="62" y="152" width="16" height="9" rx="2" fill="#0f172a"/><rect x="63" y="153" width="14" height="7" rx="1" fill="#fde047" opacity=".9"/><path d="M78 156 h14 l-4 -6 h8" fill="none" stroke="#f97316" stroke-width="2"/>');
+    // 창 앞 학생
+    s += hs(2, 132, 20, 70, 96, person(168, 112, { shirt:'#f472b6', pose:'sit', arms:'forward' }) + '<rect x="130" y="104" width="76" height="6" fill="#94a3b8"/>');
+    // 소화기
+    s += hs(5, 206, 68, 34, 46, '<rect x="214" y="78" width="14" height="30" rx="5" fill="#dc2626"/><rect x="217" y="70" width="8" height="8" rx="2" fill="#0f172a"/><rect x="214" y="90" width="14" height="5" fill="#fff"/>');
+    // 비상구 표시
+    s += hs(4, 236, 30, 48, 36, '<rect x="238" y="32" width="44" height="22" rx="4" fill="#16a34a"/><text x="260" y="48" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" font-family="sans-serif">비상구</text>');
+    // 책상 + 멀티탭
+    s += hs(1, 222, 108, 92, 76, '<rect x="224" y="150" width="88" height="8" rx="2" fill="#a16207"/><rect x="230" y="158" width="6" height="30" fill="#78350f"/><rect x="300" y="158" width="6" height="30" fill="#78350f"/>' +
+      '<rect x="236" y="140" width="56" height="10" rx="3" fill="#e2e8f0"/><circle cx="246" cy="145" r="2" fill="#ef4444"/><circle cx="262" cy="145" r="2" fill="#ef4444"/><circle cx="278" cy="145" r="2" fill="#ef4444"/>' +
+      '<path d="M246 140 q-14 -22 -26 -4 M262 140 q0 -26 -10 -34 M278 140 q16 -24 30 -10" fill="none" stroke="#f97316" stroke-width="2.4"/>' +
+      '<rect x="296" y="116" width="26" height="14" rx="6" fill="#ec4899"/><rect x="290" y="122" width="12" height="5" fill="#475569"/>' +
+      '<text x="242" y="114" font-size="14" font-family="sans-serif">⚡</text>');
+    // 문 + 캐리어
+    s += hs(3, 292, 60, 62, 122, '<rect x="296" y="50" width="56" height="130" rx="3" fill="#92400e"/><circle cx="342" cy="118" r="2.6" fill="#fde047"/><rect x="298" y="130" width="38" height="30" rx="5" fill="#0ea5e9"/><rect x="308" y="108" width="34" height="24" rx="5" fill="#ef4444"/><rect x="312" y="156" width="36" height="24" rx="5" fill="#8b5cf6"/>');
+    s += '</svg>';
+    return { svg:s, items:items };
+  }
+};
+
+function playHidden(st, i){
+  const sc = SCENES[st.scene](); const items = sc.items;
+  const need = items.filter(function(x){ return x.risk; }).length; let found = 0, left = st.time, done = false;
+  setScreen('<div class="card"><div class="qhead"><span>' + st.icon + ' ' + st.name + '</span><span class="tm" id="tm">⏱ ' + left + '</span></div>' +
+    '<div class="tbar"><i id="tb"></i></div><p class="q" style="margin-top:0">' + st.prompt + '</p><div class="scene" id="scene">' + sc.svg + '</div>' +
+    '<div class="findbar"><span>찾은 위험</span><span id="fc">0 / ' + need + '</span></div><ul class="foundlist" id="foundList"></ul>' +
+    '<button class="btn ghost" id="hint">💡 힌트 (-30점, -10초)</button></div>');
+  const svg = $('#scene svg'); const NS = 'http://www.w3.org/2000/svg';
+  const tb = $('#tb'); tb.style.transition = 'none'; tb.style.width = '100%';
+  function mark(it, color, label, keep){
+    const r = document.createElementNS(NS, 'rect');
+    const x = it.x, y = it.y, w = it.w, h = it.h;
+    r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', w); r.setAttribute('height', h); r.setAttribute('rx', 8);
+    r.setAttribute('fill', 'none'); r.setAttribute('stroke', color); r.setAttribute('stroke-width', 3); r.setAttribute('pointer-events', 'none');
+    svg.appendChild(r);
+    let t = null;
+    if (label){ t = document.createElementNS(NS, 'text'); t.setAttribute('x', x + w / 2); t.setAttribute('y', Math.max(12, y - 4)); t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('font-size', 11); t.setAttribute('font-weight', 800); t.setAttribute('fill', color); t.setAttribute('stroke', '#fff'); t.setAttribute('stroke-width', 3); t.setAttribute('paint-order', 'stroke');
+      t.setAttribute('pointer-events', 'none'); t.textContent = label; svg.appendChild(t); }
+    if (!keep) setTimeout(function(){ r.remove(); if (t) t.remove(); }, 1100);
+    return r;
+  }
+  function win(){
+    done = true; clearTimer();
+    const bonus = Math.max(0, left) * 2; addScore(bonus);
+    setTimeout(function(){ stageClear(i, bonus); }, 900);
+  }
+  svg.addEventListener('click', function(ev){
+    if (done) return;
+    const g = ev.target.closest ? ev.target.closest('.hs') : null; if (!g) return;
+    const k = +g.dataset.i; const it = items[k]; if (it.done) return;
+    it.done = true;
+    if (it.risk){
+      found++; G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); const gain = 100 + comboBonus(); addScore(gain);
+      mark(it, '#16a34a', '✓', true);
+      const li = document.createElement('li'); li.innerHTML = '<b>✔ ' + it.label + ' (+' + gain + ')</b>' + it.why; $('#foundList').appendChild(li);
+      $('#fc').textContent = found + ' / ' + need;
+      if (found === need) win();
+    } else {
+      mark(it, '#dc2626', '안전해요', false); logWrong(st.id + '-DECOY' + k, st.name, '안전한 대상을 위험으로 선택: ' + it.why.slice(0, 40));
+      toast(it.why);
+      if (loseHeart()) return;
+    }
+  });
+  // 간격 위험(레일바이크)은 눈에 띄는 화살표로 위치를 암시하지 않고, 힌트에서만 보여줍니다.
+  $('#hint').onclick = function(){
+    if (done) return;
+    const rest = items.filter(function(x){ return x.risk && !x.done; }); if (!rest.length) return;
+    useHint(); left = Math.max(1, left - 10);
+    const it = rest[Math.floor(Math.random() * rest.length)];
+    const r = mark(it, '#f59e0b', '여기를 보세요', false); r.setAttribute('class', 'pulse');
+    toast('💡 위험 요소 하나의 위치를 알려줬어요 (-30점, -10초)');
+  };
+  function tick(){
+    left--; const tm = $('#tm'); if (tm){ tm.textContent = '⏱ ' + Math.max(0, left); tm.className = 'tm' + (left <= 10 ? ' low' : ''); }
+    tb.style.transition = 'width 1s linear'; tb.style.width = Math.max(0, left / st.time * 100) + '%';
+    if (left <= 0){
+      clearTimer(); toast('시간 초과! 하트 -1, 30초를 더 드려요');
+      if (loseHeart()) return;
+      left = 30; G.timer = setInterval(tick, 1000);
+    }
+  }
+  G.timer = setInterval(tick, 1000);
+}
+
+/* ═════════════════════ 마지막 문 ═════════════════════ */
+function playFinal(st, i){
+  function round(){
+    const qs = shuffle(st.qs); let qi = 0, wrongCount = 0;
+    function render(){
+      const q = qs[qi];
+      setScreen('<div class="card"><div class="qhead"><span>' + st.icon + ' 마지막 문 · ' + (qi + 1) + '/' + qs.length + '</span><span class="tm">하트 감소 없음</span></div>' +
+        '<p class="q">' + q.q + '</p><div class="oxrow"><button class="oxbtn o" id="bo">O</button><button class="oxbtn x" id="bx">X</button></div><div id="result"></div></div>');
+      function pick(c){
+        const bo = $('#bo'), bx = $('#bx'); bo.disabled = bx.disabled = true; (q.a ? bo : bx).classList.add('right');
+        const ok = (c === q.a);
+        if (ok){ G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); addScore(60); } else { (c ? bo : bx).classList.add('wrong'); wrongCount++; G.combo = 0; updateHud(); logWrong(q.id, st.name, q.q); }
+        $('#result').innerHTML = '<div class="explain ' + (ok ? 'good' : 'bad') + '"><b>' + (ok ? '정답!' : '아쉬워요!') + '</b>' + q.why + '</div><button class="btn" id="nx">' + (qi === qs.length - 1 ? '문 열어보기' : '다음 문제') + '</button>';
+        $('#nx').onclick = function(){ qi++; if (qi < qs.length) render(); else end(); };
+      }
+      $('#bo').onclick = function(){ pick(true); }; $('#bx').onclick = function(){ pick(false); };
+    }
+    function end(){
+      if (wrongCount === 0){ if (G.badges.indexOf('FINAL') === -1) G.badges.push('FINAL'); updateHud(); showResult(); }
+      else setScreen('<div class="card clear"><div class="badge">🔒</div><h2>문이 아직 안 열렸어요</h2><p class="sub" style="margin-top:6px">' + wrongCount + '문제를 틀렸어요. 해설을 떠올리며 다시 도전해요!<br>(하트·점수 감소 없음)</p><button class="btn accent" id="rt">다시 도전</button></div>');
+      if (wrongCount !== 0) $('#rt').onclick = round;
+    }
+    render();
+  }
+  round();
+}
+
+/* ═════════════════════ 결과 · 수료증 · 전송 ═════════════════════ */
+function fmtDur(s){ const m = Math.floor(s / 60); return m + '분 ' + (s % 60) + '초'; }
+function showResult(){
+  clearTimer(); $('#hud').style.display = 'none';
+  const secs = Math.round((Date.now() - G.start) / 1000); const p = G.player;
+  const names = STAGES.filter(function(s){ return G.badges.indexOf(s.id) !== -1; }).map(function(s){ return '<span>' + s.icon + ' ' + s.badge + '</span>'; }).join('');
+  setScreen('<div class="hero"><div class="emojis">🎉🏅🎉</div><h1>탈출 성공!</h1><p></p></div>' +
+    '<div class="card"><div class="badges">' + names + '</div>' +
+    '<div class="stats"><div class="stat"><b>' + G.score + '</b><span>최종 점수</span></div><div class="stat"><b>' + G.maxCombo + '</b><span>최고 콤보</span></div>' +
+    '<div class="stat"><b>' + G.hearts + '/5</b><span>남은 하트</span></div><div class="stat"><b>' + fmtDur(secs) + '</b><span>걸린 시간</span></div></div>' +
+    '<div class="send" id="sendMsg">결과를 선생님께 전달하는 중…</div><canvas id="cert" width="900" height="620"></canvas>' +
+    '<button class="btn accent" id="saveCert">🏅 수료증 이미지로 저장</button><button class="btn ghost" id="again">처음부터 다시 하기</button></div>');
+  document.querySelector('.hero p').textContent = p.grade + '학년 ' + p.cls + '반 ' + p.num + '번 ' + p.name + ' 학생, 모든 안전 미션을 완수했어요!';
+  drawCert($('#cert'), p, secs);
+  $('#saveCert').onclick = function(){
+    const a = document.createElement('a'); a.href = $('#cert').toDataURL('image/png'); a.download = '안전지킴이_수료증_' + p.name + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  $('#again').onclick = showIntro;
+  sendResult(secs);
+}
+function sendResult(secs){
+  const msg = $('#sendMsg');
+  if (!SCORE_API_URL){ msg.style.color = 'var(--sub)'; msg.textContent = '연습 모드: 점수는 선생님께 전달되지 않아요.'; return; }
+  if (G.sent){ msg.style.color = 'var(--ok)'; msg.textContent = '✅ 이미 선생님께 전달됐어요.'; return; }
+  const p = G.player;
+  const body = JSON.stringify({ type:'result', grade:p.grade, cls:p.cls, num:p.num, name:p.name, score:G.score, maxCombo:G.maxCombo, hearts:G.hearts, hints:G.hints, seconds:secs, badges:G.badges.length, wrong:G.wrong });
+  // Content-Type을 지정하지 않아 text/plain으로 전송 → CORS 프리플라이트를 피합니다.
+  fetch(SCORE_API_URL, { method:'POST', body:body }).then(function(r){ return r.json(); }).then(function(j){
+    if (j && j.ok){ G.sent = true; msg.style.color = 'var(--ok)'; msg.textContent = '✅ 결과가 선생님께 전달됐어요.'; }
+    else throw new Error('server');
+  }).catch(function(){
+    msg.style.color = 'var(--bad)'; msg.innerHTML = '⚠️ 전송에 실패했어요. <a href="#" id="retry">다시 전송</a>';
+    const r = $('#retry'); if (r) r.onclick = function(e){ e.preventDefault(); msg.style.color = 'var(--sub)'; msg.textContent = '다시 전송하는 중…'; sendResult(secs); };
+  });
+}
+function drawCert(cv, p, secs){
+  const c = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#fffbeb'); g.addColorStop(1, '#e0f2fe'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.strokeStyle = '#0e5a85'; c.lineWidth = 10; c.strokeRect(22, 22, W - 44, H - 44); c.strokeStyle = '#f59e0b'; c.lineWidth = 3; c.strokeRect(38, 38, W - 76, H - 76);
+  c.textAlign = 'center'; c.fillStyle = '#0b3b5c';
+  const F = '"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif';
+  c.font = '800 24px ' + F; c.fillText('청북고등학교 · 제주 수학여행 안전교육', W / 2, 100);
+  c.font = '900 64px ' + F; c.fillText('수 료 증', W / 2, 190);
+  c.font = '700 26px ' + F; c.fillStyle = '#334155';
+  c.fillText(p.grade + '학년 ' + p.cls + '반 ' + p.num + '번', W / 2, 262);
+  c.font = '900 52px ' + F; c.fillStyle = '#0e5a85'; c.fillText(p.name, W / 2, 330);
+  c.font = '600 24px ' + F; c.fillStyle = '#334155';
+  c.fillText('위 학생은 「제주 수학여행 안전 대탈출」 미션에서', W / 2, 394);
+  c.fillText('안전 배지 ' + (G.badges.length - (G.badges.indexOf('FINAL') !== -1 ? 1 : 0)) + '개를 모으고 마지막 문을 열었으므로', W / 2, 430);
+  c.fillText('우리 반 안전 지킴이로 인정합니다.', W / 2, 466);
+  c.font = '700 22px ' + F; c.fillStyle = '#b45309'; c.fillText('점수 ' + G.score + '점 · 최고 콤보 ' + G.maxCombo + ' · ' + fmtDur(secs), W / 2, 524);
+  const d = new Date(); c.font = '600 20px ' + F; c.fillStyle = '#64748b'; c.fillText(d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일', W / 2, 566);
+  c.font = '64px sans-serif'; c.fillText('🏅', 120, 130); c.fillText('🏅', W - 120, 130);
+}
+
+showIntro();
+</script>
+</body>
+</html>
