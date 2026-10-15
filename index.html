@@ -153,6 +153,11 @@
     .building-plane-card.b-theme { background: #fff5f7; border-color: #fbcfe8; }
     .building-plane-card.a-theme { background: #f0f7ff; border-color: #bfdbfe; }
     .plane-grid-scroll { overflow-x: auto; padding: 8px 0; }
+    .plane-grid.compact { min-width: 0; gap: 4px; }
+    .plane-grid.compact .box-room { min-width: 0; padding: 9px 0; font-size: 0.78rem; border-radius: 6px; }
+    .plane-grid.compact .box-room.target { font-size: 0.85rem; transform: scale(1.12); }
+    .plane-grid.compact .box-room.ev { font-size: 0.6rem; letter-spacing: -0.5px; }
+    .plane-grid.compact .plane-hall-cell { margin: 0 -2px; }
     .plane-hall-cell { background: #cbd5e1; height: 100%; min-height: 24px; margin: 0 -4px; }
     .box-room.ev { background: #fef3c7; border-color: #f59e0b; color: #92400e; font-size: 0.8rem; font-weight: 900; border-style: solid; }
     .plane-grid { display: grid; grid-auto-flow: column; grid-template-rows: auto 24px auto; gap: 8px; align-items: center; justify-content: center; min-width: 320px; }
@@ -1502,13 +1507,16 @@
       document.getElementById('modalRoomTitle').innerText = roomWithHo;
       document.getElementById('modalRoomMembers').innerText = members;
       document.getElementById('modalPlaneHeader').firstElementChild.innerText =
-        `🏢 ${isFemale ? 'B동(여학생)' : 'A동(남학생)'} ${floor}층 평면도`;
+        `🏢 ${isFemale ? 'B동(여학생)' : 'A동(남학생)'} ${floor}층`;
 
       const cols = wingColumns(isFemale, floor);
+      const compact = !isFemale;   // A동은 방이 많아 한 화면에 다 보이도록 2자리 호수만 표시
       const cell = (room) => {
         if (!room) return `<div class="box-room facility">-</div>`;
         const isTarget = (room === rawRoom);
-        return `<div class="box-room ${isTarget ? 'target' : ''}">${room}${isTarget ? '<br><span style="font-size:0.65rem;">★현재</span>' : ''}</div>`;
+        const label = compact ? room.slice(1) : room;
+        const mark = isTarget ? (compact ? '<br><span style="font-size:0.6rem;">★</span>' : '<br><span style="font-size:0.65rem;">★현재</span>') : '';
+        return `<div class="box-room ${isTarget ? 'target' : ''}">${label}${mark}</div>`;
       };
       let gridHtml = '';
       cols.forEach(c => {
@@ -1520,7 +1528,8 @@
       });
 
       const gridEl = document.getElementById('modalPlaneGrid');
-      gridEl.style.gridTemplateColumns = `repeat(${cols.length}, minmax(52px, 1fr))`;
+      gridEl.classList.toggle('compact', compact);
+      gridEl.style.gridTemplateColumns = compact ? `repeat(${cols.length}, minmax(0, 1fr))` : `repeat(${cols.length}, minmax(52px, 1fr))`;
       gridEl.innerHTML = gridHtml;
 
       document.getElementById('roomMapModal').style.display = 'flex';
