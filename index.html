@@ -153,6 +153,8 @@
     .building-plane-card.b-theme { background: #fff5f7; border-color: #fbcfe8; }
     .building-plane-card.a-theme { background: #f0f7ff; border-color: #bfdbfe; }
     .plane-grid-scroll { overflow-x: auto; padding: 8px 0; }
+    .plane-hall-cell { background: #cbd5e1; height: 100%; min-height: 24px; margin: 0 -4px; }
+    .box-room.ev { background: #fef3c7; border-color: #f59e0b; color: #92400e; font-size: 0.8rem; font-weight: 900; border-style: solid; }
     .plane-grid { display: grid; grid-auto-flow: column; grid-template-rows: auto 24px auto; gap: 8px; align-items: center; justify-content: center; min-width: 320px; }
     .box-room { border: 1.5px solid #94a3b8; background: #ffffff; border-radius: 8px; padding: 10px 6px; text-align: center; font-size: 0.85rem; font-weight: 800; color: #1e293b; min-width: 62px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
     .box-room.target { background: #ef4444 !important; border-color: #b91c1c !important; color: #ffffff !important; font-size: 0.95rem; font-weight: 900; animation: pulse 1.2s infinite; transform: scale(1.06); z-index: 2; }
@@ -164,7 +166,31 @@
       70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
       100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
-    </style>
+  
+    /* ── 버스 좌석표 ── */
+    .view-toggle{display:flex;gap:6px;margin-top:8px}
+    .view-toggle button{flex:1;padding:8px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-weight:700;font-size:.85rem;cursor:pointer}
+    .view-toggle button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .bus-chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0}
+    .seat-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:10px}
+    .seat-front{text-align:center;font-size:.75rem;color:#64748b;margin-bottom:6px;font-weight:700}
+    .seat-row{display:grid;grid-template-columns:22px 1fr 1fr 14px 1fr 1fr;gap:4px;margin-bottom:4px;align-items:stretch}
+    .seat-rn{font-size:.7rem;color:#64748b;display:flex;align-items:center;justify-content:center}
+    .seat{min-height:46px;border-radius:8px;border:2px solid transparent;font-size:.78rem;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:2px;line-height:1.15;word-break:keep-all;text-align:center}
+    .seat small{font-weight:500;font-size:.6rem;opacity:.75}
+    .seat.empty{background:#f1f5f9;color:#cbd5e1;cursor:default}
+    .seat.unchecked{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+    .seat.checked{background:#dcfce7;color:#166534;border-color:#86efac}
+    .seat-sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.2);border-radius:18px 18px 0 0;padding:16px;z-index:9999;display:none}
+    .seat-sheet .nm{font-size:1.15rem;font-weight:800}
+    .seat-sheet .sub{font-size:.8rem;color:#64748b;margin-bottom:10px}
+    .seat-sheet .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+    .seat-sheet a,.seat-sheet button{flex:1;min-width:30%;text-align:center;padding:12px 6px;border-radius:10px;border:none;font-weight:700;font-size:.9rem;text-decoration:none;cursor:pointer}
+    .seat-sheet .call{background:#dbeafe;color:#1d4ed8}
+    .seat-sheet .ok{background:var(--primary);color:#fff}
+    .seat-sheet .undo{background:#fef3c7;color:#92400e}
+    .seat-sheet .close{background:#f1f5f9;color:#334155}
+  </style>
 </head>
 <body>
   <script>
@@ -295,6 +321,16 @@
         </select>
       </div>
 
+      <div class="view-toggle">
+        <button id="vtList" class="active" onclick="setSeatView(false)">📋 목록</button>
+        <button id="vtSeat" onclick="setSeatView(true)">🚌 좌석표</button>
+      </div>
+      <div id="seatView" style="display:none">
+        <div class="bus-chips" id="busChips"></div>
+        <div id="seatChart"></div>
+        <div style="text-align:center;margin:8px 0"><button class="btn btn-check" onclick="loadSeating(true)">🔄 좌석 새로고침</button></div>
+      </div>
+      <div id="seatSheet" class="seat-sheet"></div>
       <div id="assemblyList"></div>
 
       <div class="section-label">관리 도구</div>
@@ -515,18 +551,28 @@
       } catch(e) {}
     }
 
-    // B동(여학생) 및 A동(남학생) 층별 독립 평면도 구조
-    const wingLayouts = {
-      'B_6': { title: '🏢 B동(여학생) 6층 평면도', top: ['658', '656', '654', '652'], bottom: ['659', '657', '655', '653', '651'] },
-      'B_5': { title: '🏢 B동(여학생) 5층 평면도', top: ['558', '556', '554', '552'], bottom: ['559', '557', '555', '553', '551'] },
-      'B_3': { title: '🏢 B동(여학생) 3층 평면도', top: ['358', '356', '354', '352'], bottom: ['359', '357', '355', '353', '351'] },
-      'B_2': { title: '🏢 B동(여학생) 2층 평면도', top: ['258', '256', '254', '252'], bottom: ['259', '257', '255', '253', '251'] },
-
-      'A_6': { title: '🏢 A동(남학생) 6층 평면도', top: ['630', '628', '626', '624', '622', '602', '604', '606', '608', '610'], bottom: ['631', '629', '627', '625', '623', '621', '601', '603', '605', '607', '609'] },
-      'A_5': { title: '🏢 A동(남학생) 5층 평면도', top: ['530', '528', '526', '524', '522', '502', '504', '506', '508', '510'], bottom: ['531', '529', '527', '525', '523', '521', '501', '503', '505', '507', '509', '511'] },
-      'A_3': { title: '🏢 A동(남학생) 3층 평면도', top: ['330', '328', '326', '324', '322', '302', '304', '306', '308', '310'], bottom: ['331', '329', '327', '325', '323', '321', '301', '303', '305', '307', '309', '311'] },
-      'A_2': { title: '🏢 A동 2층 평면도', top: ['통로/EV', '프런트'], bottom: ['부대업장'] }
-    };
+    // B동(여학생) / A동(남학생) 층별 평면도 — 층(floor)만 바꿔서 자동 생성
+    //  · A동: 가운데 엘리베이터(E/V), 좌측 21~30호, 우측 01~11호 (각 층 공통). E/V에 가까운 쪽이 낮은 번호(01, 21)
+    //  · B동: 각 층 51~59호, 오른쪽 끝에 엘리베이터(E/V) 연결통로
+    //  · 복도 기준 위 줄 = 짝수호, 아래 줄 = 홀수호
+    function wingColumns(isFemale, floor) {
+      const rn = n => floor + String(n).padStart(2, '0');
+      const cols = [];
+      if (isFemale) {
+        cols.push({ top: rn(58), bottom: rn(59) });
+        cols.push({ top: rn(56), bottom: rn(57) });
+        cols.push({ top: rn(54), bottom: rn(55) });
+        cols.push({ top: rn(52), bottom: rn(53) });
+        cols.push({ top: '', bottom: rn(51) });
+        cols.push({ ev: true });
+      } else {
+        for (let n = 30; n >= 22; n -= 2) cols.push({ top: rn(n), bottom: rn(n - 1) });   // 좌측: 30/29 … 22/21
+        cols.push({ ev: true });
+        for (let n = 2; n <= 10; n += 2) cols.push({ top: rn(n), bottom: rn(n - 1) });   // 우측: 02/01 … 10/09
+        cols.push({ top: '', bottom: rn(11) });                                           // 우측 끝: 11호
+      }
+      return cols;
+    }
 
     window.onload = function() {
       const p1 = callApi('getStudentSimpleData').then(function(res) {
@@ -1279,8 +1325,90 @@
           </div>
         `;
       });
+      if (seatMode) renderSeatChart();
       document.getElementById('assemblyList').innerHTML = html || '<p style="text-align:center; padding:20px;">참가 학생 데이터가 없습니다.</p>';
     }
+
+
+    // ── 버스 좌석표 ──
+    let seatMode = false, seatData = null, seatBus = null;
+    const SEAT_COLORS = ['#fef9c3','#fce7f3','#dbeafe','#ede9fe','#ffedd5','#cffafe','#fae8ff','#ecfccb'];
+
+    function setSeatView(on) {
+      seatMode = on;
+      document.getElementById('vtList').classList.toggle('active', !on);
+      document.getElementById('vtSeat').classList.toggle('active', on);
+      document.getElementById('seatView').style.display = on ? 'block' : 'none';
+      document.getElementById('assemblyList').style.display = on ? 'none' : 'block';
+      closeSeatSheet();
+      if (on) { if (!seatData) loadSeating(); else renderSeatChart(); }
+    }
+
+    function loadSeating() {
+      document.getElementById('seatChart').innerHTML = '<p style="text-align:center;padding:20px;color:#64748b">좌석표 불러오는 중…</p>';
+      callApi('getSeating').then(function(res) {
+        seatData = res.seats || [];
+        renderSeatChart();
+      }).catch(function() {
+        document.getElementById('seatChart').innerHTML = '<p style="text-align:center;padding:20px;color:#b91c1c">좌석표를 불러오지 못했어요. 인터넷/배포 버전을 확인하세요.</p>';
+      });
+    }
+
+    function seatStudent(e) {
+      return fullStudents.find(function(s) { return s.gradeClass === e.gradeClass && s.name === e.name; });
+    }
+
+    function renderSeatChart() {
+      const box = document.getElementById('seatChart');
+      if (!seatData) return;
+      if (!seatData.length) { box.innerHTML = '<p style="text-align:center;padding:20px;color:#64748b">\'좌석배정\' 시트에 데이터가 없어요.<br>시트 메뉴 [🚌 좌석 배정 → 테스트용 시트 만들기]를 실행하세요.</p>'; document.getElementById('busChips').innerHTML=''; return; }
+      const buses = Array.from(new Set(seatData.map(function(e) { return e.bus; })))
+        .sort(function(a, b) { return parseInt(a) - parseInt(b); });
+      if (!seatBus || buses.indexOf(seatBus) < 0) seatBus = buses[0];
+      document.getElementById('busChips').innerHTML = buses.map(function(b) {
+        const es = seatData.filter(function(e) { return e.bus === b; });
+        const done = es.filter(function(e) { const st = seatStudent(e); return st && st.checkedAssembly; }).length;
+        return '<div class="chip ' + (b === seatBus ? 'active' : '') + '" onclick="seatBus=\'' + b + '\';renderSeatChart()">' + b + ' ' + done + '/' + es.length + '</div>';
+      }).join('');
+      const map = {};
+      seatData.filter(function(e) { return e.bus === seatBus; }).forEach(function(e) { map[e.seat] = e; });
+      let html = '<div class="seat-wrap"><div class="seat-front">⬆ 앞 (기사석)</div>';
+      for (let r = 1; r <= 10; r++) {
+        html += '<div class="seat-row" style="background:' + SEAT_COLORS[(r - 2 + 8) % 8] + '33;border-radius:8px"><div class="seat-rn">' + r + '</div>';
+        for (let n = 1; n <= 4; n++) {
+          if (n === 3) html += '<div></div>';
+          const id = r + '-' + n, e = map[id];
+          if (!e) { html += '<div class="seat empty">·</div>'; continue; }
+          const st = seatStudent(e), chk = st && st.checkedAssembly;
+          html += '<div class="seat ' + (chk ? 'checked' : 'unchecked') + '" onclick="openSeatSheet(\'' + id + '\')">' + e.name + '<small>' + e.gradeClass + (chk ? ' ✔' : '') + '</small></div>';
+        }
+        html += '</div>';
+      }
+      box.innerHTML = html + '</div>';
+    }
+
+    function openSeatSheet(id) {
+      const e = seatData.find(function(x) { return x.bus === seatBus && x.seat === id; });
+      if (!e) return;
+      const st = seatStudent(e);
+      const sh = document.getElementById('seatSheet');
+      const idx = fullStudents.indexOf(st);
+      const chk = st && st.checkedAssembly;
+      let h = '<div class="nm">' + e.name + ' <span style="font-size:.8rem;color:#64748b">' + e.gradeClass + ' · ' + e.bus + ' ' + id + '</span></div>';
+      h += '<div class="sub">' + (chk ? '✔ 확인됨' : '❗ 아직 확인 안 됨') + '</div><div class="row">';
+      if (st && st.studentTel) h += '<a class="call" href="tel:' + st.studentTel + '">📞 학생</a>';
+      if (st && st.parent1Tel) h += '<a class="call" href="tel:' + st.parent1Tel + '">📞 보호자1</a>';
+      if (st && st.parent2Tel) h += '<a class="call" href="tel:' + st.parent2Tel + '">📞 보호자2</a>';
+      h += '</div><div class="row">';
+      if (st) h += chk ? '<button class="undo" onclick="seatToggle(' + idx + ')">확인 취소</button>' : '<button class="ok" onclick="seatToggle(' + idx + ')">✔ 확인</button>';
+      h += '<button class="close" onclick="closeSeatSheet()">닫기</button></div>';
+      if (!st) h += '<div class="sub">명단에서 이 학생을 찾지 못했어요 (반/이름 확인)</div>';
+      sh.innerHTML = h; sh.style.display = 'block';
+    }
+
+    function closeSeatSheet() { const sh = document.getElementById('seatSheet'); if (sh) sh.style.display = 'none'; }
+
+    function seatToggle(idx) { toggleTeacherCheck(idx); closeSeatSheet(); }
 
     function toggleTeacherCheck(idx) {
       const s = fullStudents[idx];
@@ -1356,9 +1484,6 @@
       const rawRoom = roomWithHo.replace('호', '').trim();
       const floor = rawRoom.charAt(0);
       const isFemale = parseInt(rawRoom.substring(1)) >= 50;
-      const wingKey = (isFemale ? 'B_' : 'A_') + floor;
-      const layout = wingLayouts[wingKey] || wingLayouts['B_6'];
-
       const badgeEl = document.getElementById('modalBuildingBadge');
       const cardEl = document.getElementById('modalPlaneCard');
 
@@ -1376,40 +1501,26 @@
 
       document.getElementById('modalRoomTitle').innerText = roomWithHo;
       document.getElementById('modalRoomMembers').innerText = members;
-      document.getElementById('modalPlaneHeader').firstElementChild.innerText = layout.title;
+      document.getElementById('modalPlaneHeader').firstElementChild.innerText =
+        `🏢 ${isFemale ? 'B동(여학생)' : 'A동(남학생)'} ${floor}층 평면도`;
 
-      const maxLen = Math.max(layout.top.length, layout.bottom.length);
-      let topHtml = '';
-      let bottomHtml = '';
-
-      for (let i = 0; i < maxLen; i++) {
-        const topRoom = layout.top[i] || '';
-        const botRoom = layout.bottom[i] || '';
-
-        if (topRoom) {
-          const isTarget = (topRoom === rawRoom);
-          topHtml += `<div class="box-room ${isTarget ? 'target' : ''}">${topRoom}${isTarget ? '<br><span style="font-size:0.65rem;">★현재</span>' : ''}</div>`;
+      const cols = wingColumns(isFemale, floor);
+      const cell = (room) => {
+        if (!room) return `<div class="box-room facility">-</div>`;
+        const isTarget = (room === rawRoom);
+        return `<div class="box-room ${isTarget ? 'target' : ''}">${room}${isTarget ? '<br><span style="font-size:0.65rem;">★현재</span>' : ''}</div>`;
+      };
+      let gridHtml = '';
+      cols.forEach(c => {
+        if (c.ev) {
+          gridHtml += `<div class="box-room facility ev">E/V</div><div class="plane-hall-cell"></div><div class="box-room facility ev">E/V</div>`;
         } else {
-          topHtml += `<div class="box-room facility">-</div>`;
+          gridHtml += cell(c.top) + `<div class="plane-hall-cell"></div>` + cell(c.bottom);
         }
-
-        if (botRoom) {
-          const isTarget = (botRoom === rawRoom);
-          bottomHtml += `<div class="box-room ${isTarget ? 'target' : ''}">${botRoom}${isTarget ? '<br><span style="font-size:0.65rem;">★현재</span>' : ''}</div>`;
-        } else {
-          bottomHtml += `<div class="box-room facility">-</div>`;
-        }
-      }
-
-      const hallwayDirection = isFemale ? '◀ 엘리베이터(E/V) 연결통로 방향' : '엘리베이터(E/V) 연결통로 방향 ▶';
-      const gridHtml = `
-        ${topHtml}
-        <div class="plane-hallway">${hallwayDirection}</div>
-        ${bottomHtml}
-      `;
+      });
 
       const gridEl = document.getElementById('modalPlaneGrid');
-      gridEl.style.gridTemplateColumns = `repeat(${maxLen}, minmax(62px, 1fr))`;
+      gridEl.style.gridTemplateColumns = `repeat(${cols.length}, minmax(52px, 1fr))`;
       gridEl.innerHTML = gridHtml;
 
       document.getElementById('roomMapModal').style.display = 'flex';
