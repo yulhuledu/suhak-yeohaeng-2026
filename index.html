@@ -28,8 +28,9 @@
     header p { font-size: 0.8rem; opacity: 0.85; margin-top: 3px; }
     .pin-badge { position: absolute; right: 10px; top: 14px; max-width: 78px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 14px; font-size: 0.62rem; line-height: 1.3; padding: 5px 6px; cursor: pointer; color: #fff; text-align: center; white-space: normal; word-break: keep-all; }
 
-    .top-nav { display: flex; gap: 6px; padding: 10px 12px; max-width: 600px; margin: 0 auto; }
-    .top-nav-btn { flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 10px 0; font-weight: 700; font-size: 0.88rem; cursor: pointer; background: #fff; color: #475569; }
+    .top-nav { display: flex; gap: 6px; padding: 10px 12px; max-width: 600px; margin: 0 auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .top-nav::-webkit-scrollbar { display: none; }
+    .top-nav-btn { flex: 1 0 auto; white-space: nowrap; padding-left: 10px !important; padding-right: 10px !important; border: 1px solid var(--border); border-radius: 10px; padding: 10px 0; font-weight: 700; font-size: 0.88rem; cursor: pointer; background: #fff; color: #475569; }
     .top-nav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
     .container { max-width: 600px; margin: 0 auto; padding: 0 12px; }
@@ -172,6 +173,27 @@
       100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
   
+    /* ── 여행 준비 / 코스 안내 ── */
+    .info-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+    .info-card h2 { font-size: 1rem; font-weight: 800; margin-bottom: 6px; }
+    .info-card h3 { font-size: 0.88rem; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+    .info-card p { font-size: 0.85rem; line-height: 1.55; color: #334155; }
+    .info-card p.muted { color: var(--gray); font-size: 0.78rem; }
+    .rule-line { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem; }
+    .rule-line:last-child { border-bottom: none; }
+    .rule-line .k { color: var(--gray); flex-shrink: 0; width: 34%; }
+    .rule-line .v { font-weight: 700; text-align: right; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill { font-size: 0.78rem; padding: 5px 10px; border-radius: 999px; font-weight: 700; }
+    .pill.no { background: #fef2f2; color: #dc2626; }
+    .pill.limit { background: #fff7ed; color: #c2410c; }
+    .warn-banner { background: #fef2f2; color: #b91c1c; border-radius: 12px; padding: 11px 13px; font-size: 0.8rem; font-weight: 600; line-height: 1.5; margin-bottom: 10px; }
+    .check-item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 11px; background: #f1f5f9; border-radius: 10px; margin-bottom: 6px; font-size: 0.85rem; cursor: pointer; }
+    .check-item input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
+    .check-item.done span { color: var(--gray); text-decoration: line-through; }
+    .course-day { font-weight: 800; font-size: 0.78rem; color: var(--primary); margin: 12px 0 5px; }
+    .course-row { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; }
+
     /* ── 버스 좌석표 ── */
     .view-toggle{display:flex;gap:6px;margin-top:8px}
     .view-toggle button{flex:1;padding:8px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-weight:700;font-size:.85rem;cursor:pointer}
@@ -213,8 +235,10 @@
   </header>
 
   <div class="top-nav">
-    <button class="top-nav-btn active" onclick="switchMainTab('tab-assembly')">📍 집합 점검</button>
-    <button class="top-nav-btn" id="navBtnRollcall" style="display:none;" onclick="requireTeacherAuth('tab-rollcall')">🛏️ 방배치도 (야간점호)</button>
+    <button class="top-nav-btn active" id="navBtnAssembly" onclick="switchMainTab('tab-assembly')">📍 집합 점검</button>
+    <button class="top-nav-btn" id="navBtnPrep" onclick="openInfoTab('tab-prep')">🧳 여행 준비</button>
+    <button class="top-nav-btn" id="navBtnCourse" onclick="openInfoTab('tab-course')">🗺️ 코스 안내</button>
+    <button class="top-nav-btn" id="navBtnRollcall" style="display:none;" onclick="requireTeacherAuth('tab-rollcall')">🛏️ 방배치도</button>
     <button class="top-nav-btn" id="navBtnContacts" style="display:none;" onclick="requireTeacherAuth('tab-contacts')">📞 비상연락망</button>
   </div>
 
@@ -399,6 +423,57 @@
           <button class="btn-reset" style="width:100%;" onclick="resetCurrentAssembly()">🔄 초기화 진행</button>
         </div>
       </div>
+    </div>
+
+    <!-- 4. 여행 준비 (수화물 안내 + 준비물 체크리스트) -->
+    <div id="tab-prep" style="display:none;">
+      <div class="info-card">
+        <h2>✈️ 항공편 수화물 안내</h2>
+        <p class="muted">아래 기준은 국내선 일반 기준의 <b>예시</b>입니다. 실제 이용 항공사 공지의 무게·규격을 인솔 선생님께 반드시 재확인하세요.</p>
+      </div>
+      <div class="info-card">
+        <h3>위탁수하물 (기내에 들고 타지 않는 짐)</h3>
+        <div class="rule-line"><span class="k">무료 허용량</span><span class="v">1인 15~20kg 이내</span></div>
+        <div class="rule-line"><span class="k">개수</span><span class="v">1인 1개 원칙</span></div>
+        <div class="rule-line"><span class="k">초과 시</span><span class="v">추가 요금 발생 (개인 부담)</span></div>
+      </div>
+      <div class="info-card">
+        <h3>기내 휴대수하물</h3>
+        <div class="rule-line"><span class="k">무게</span><span class="v">10kg 이내</span></div>
+        <div class="rule-line"><span class="k">크기</span><span class="v">가로+세로+높이 115cm 이내</span></div>
+        <div class="rule-line"><span class="k">액체류</span><span class="v">개당 100ml 이하, 투명지퍼백 1개</span></div>
+      </div>
+      <div class="info-card">
+        <h3>🔋 위탁 절대 금지 · 기내만 휴대 가능</h3>
+        <div class="pill-row">
+          <span class="pill no">보조배터리</span><span class="pill no">라이터</span>
+          <span class="pill no">배터리 내장 전자담배</span><span class="pill no">휴대용 선풍기(리튬배터리)</span>
+        </div>
+        <p class="muted" style="margin-top:10px;">보조배터리는 20,000mAh(약 100Wh) 이하만 기내 반입 가능하며, 여러 개 소지 시 사전 신고가 필요할 수 있어요.</p>
+      </div>
+      <div class="info-card">
+        <h3>🎒 위탁수하물로만 가능 (기내 반입 금지)</h3>
+        <div class="pill-row">
+          <span class="pill limit">칼·가위·손톱깎이</span><span class="pill limit">헤어스프레이·무스</span>
+          <span class="pill limit">스노클링용 칼</span><span class="pill limit">100ml 초과 액체·젤류</span>
+        </div>
+      </div>
+      <div class="warn-banner">⚠️ 물놀이·액티비티 체험이 있는 조는 여벌옷과 수건을 위탁수하물에 미리 챙기세요. 젖은 옷은 비닐 지퍼백에 별도 포장을 권장합니다.</div>
+      <div class="info-card">
+        <h2>📋 준비물 체크리스트</h2>
+        <div id="prepChecklist"></div>
+        <p class="muted" style="margin-top:8px;">체크는 이 기기에만 저장돼요. 다른 학생·다른 기기와는 공유되지 않아요.</p>
+      </div>
+    </div>
+
+    <!-- 5. 코스 안내 (조편성·코스순서·코스안내 시트 기반) -->
+    <div id="tab-course" style="display:none;">
+      <div class="info-card">
+        <h2>우리 반 코스 안내</h2>
+        <p class="muted">반을 선택하면 우리 조의 3일 일정이 나와요. 일정을 누르면 안내와 주의사항을 볼 수 있어요.</p>
+        <div class="class-scroll" id="courseClassChips" style="padding-bottom:0; margin-top:8px;"></div>
+      </div>
+      <div class="info-card" id="courseTabBody"></div>
     </div>
 
     <!-- 2. 야간 점호 탭 -->
@@ -1235,6 +1310,7 @@
       document.getElementById('view-teacher-monitoring').style.display = 'none';
       document.getElementById('tab-rollcall').style.display = 'none';
       document.getElementById('tab-contacts').style.display = 'none';
+      hideInfoTabs();
 
       document.getElementById('globalClassChips').style.display = isTeacher ? 'flex' : 'none';
 
@@ -1242,16 +1318,16 @@
       navBtns.forEach(b => b.classList.remove('active'));
 
       if (tabKey === 'tab-assembly-teacher') {
-        navBtns[0].classList.add('active');
+        document.getElementById('navBtnAssembly').classList.add('active');
         document.getElementById('view-teacher-monitoring').style.display = 'block';
         renderAssemblyTeacher();
         startAssemblyPolling();
       } else if (tabKey === 'tab-rollcall') {
-        navBtns[1].classList.add('active');
+        document.getElementById('navBtnRollcall').classList.add('active');
         document.getElementById('tab-rollcall').style.display = 'block';
         renderRollcall();
       } else if (tabKey === 'tab-contacts') {
-        navBtns[2].classList.add('active');
+        document.getElementById('navBtnContacts').classList.add('active');
         document.getElementById('tab-contacts').style.display = 'block';
         renderContacts();
       }
@@ -1277,11 +1353,102 @@
         document.getElementById('tab-rollcall').style.display = 'none';
         document.getElementById('tab-contacts').style.display = 'none';
         document.getElementById('globalClassChips').style.display = 'none';
+        hideInfoTabs();
 
         const navBtns = document.querySelectorAll('.top-nav-btn');
         navBtns.forEach(b => b.classList.remove('active'));
-        navBtns[0].classList.add('active');
+        document.getElementById('navBtnAssembly').classList.add('active');
       }
+    }
+
+
+    // ── 여행 준비 / 코스 안내 탭 (학생·교사 모두 볼 수 있음) ──
+    function hideInfoTabs() {
+      document.getElementById('tab-prep').style.display = 'none';
+      document.getElementById('tab-course').style.display = 'none';
+    }
+
+    function openInfoTab(tabKey) {
+      stopScanner();
+      stopAssemblyPolling();
+      currentTab = tabKey;
+      document.getElementById('view-student-checkin').style.display = 'none';
+      document.getElementById('view-teacher-monitoring').style.display = 'none';
+      document.getElementById('tab-rollcall').style.display = 'none';
+      document.getElementById('tab-contacts').style.display = 'none';
+      document.getElementById('globalClassChips').style.display = 'none';
+      hideInfoTabs();
+      document.querySelectorAll('.top-nav-btn').forEach(b => b.classList.remove('active'));
+      if (tabKey === 'tab-prep') {
+        document.getElementById('navBtnPrep').classList.add('active');
+        document.getElementById('tab-prep').style.display = 'block';
+        renderPrepChecklist();
+      } else {
+        document.getElementById('navBtnCourse').classList.add('active');
+        document.getElementById('tab-course').style.display = 'block';
+        renderCourseTab();
+      }
+    }
+
+    const PREP_ITEMS = ['학생증 / 신분증', '멀미약, 개인 상비약', '편한 운동화, 여벌 양말', '우산 또는 우비',
+      '수건·여벌옷 (물놀이·체험 조)', '보조배터리 (기내 휴대용)', '모자·선크림 (야외 활동 대비)'];
+
+    function renderPrepChecklist() {
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem('suhak2026_prepChecklist') || '{}'); } catch (e) {}
+      const box = document.getElementById('prepChecklist');
+      box.innerHTML = PREP_ITEMS.map(function(t, i) {
+        return '<label class="check-item' + (saved[i] ? ' done' : '') + '"><input type="checkbox" ' + (saved[i] ? 'checked' : '') +
+          ' onchange="togglePrepItem(' + i + ', this)"><span>' + t + '</span></label>';
+      }).join('');
+    }
+
+    function togglePrepItem(i, el) {
+      el.closest('.check-item').classList.toggle('done', el.checked);
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem('suhak2026_prepChecklist') || '{}'); } catch (e) {}
+      saved[i] = el.checked;
+      try { localStorage.setItem('suhak2026_prepChecklist', JSON.stringify(saved)); } catch (e) {}
+    }
+
+    let courseTabClass = '';
+
+    function renderCourseTab() {
+      // 반이 정해져 있으면(링크 ?class= 또는 체크인 화면에서 선택) 그 반을 기본으로 보여줍니다.
+      if (!courseTabClass) {
+        courseTabClass = document.getElementById('studentClassSelect').value || '';
+      }
+      const classes = ['1반','2반','3반','4반','5반','6반','7반','8반','9반','10반'];
+      const locked = document.getElementById('studentClassSelect').disabled;
+      document.getElementById('courseClassChips').innerHTML = classes.map(function(c) {
+        const disabled = locked && c !== document.getElementById('studentClassSelect').value;
+        return '<div class="chip ' + (c === courseTabClass ? 'active' : '') + '" style="' + (disabled ? 'opacity:.4;pointer-events:none;' : '') +
+          '" onclick="courseTabClass=\'' + c + '\';renderCourseTab()">' + c + '</div>';
+      }).join('');
+
+      const body = document.getElementById('courseTabBody');
+      if (!courseTabClass) {
+        body.innerHTML = '<p class="muted">위에서 반을 선택해 주세요.</p>';
+        return;
+      }
+      const group = courseConfig.classToGroup[courseTabClass];
+      const courses = group ? (courseConfig.groupCourses[group] || []) : [];
+      if (!courses.length) {
+        body.innerHTML = '<p class="muted">' + courseTabClass + ' 일정이 아직 등록되지 않았어요.</p>';
+        return;
+      }
+      let lastDay = '';
+      let html = '<h2>' + courseTabClass + ' · ' + group + '</h2>';
+      courses.forEach(function(name, idx) {
+        const dayMatch = name.match(/^\[(\d)일차\]/);
+        const day = dayMatch ? dayMatch[1] + '일차' : '';
+        const label = name.replace(/^\[\d일차\]\s*/, '');
+        if (day && day !== lastDay) { html += '<div class="course-day">' + day + '</div>'; lastDay = day; }
+        const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        html += '<div class="course-row" onclick="openCoursePopup(\'' + safeName + '\')"><span>' + (idx + 1) + '. ' + label +
+          '</span><span style="color:#94a3b8;">ⓘ</span></div>';
+      });
+      body.innerHTML = html;
     }
 
     function filterClass(cls) {
