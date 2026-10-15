@@ -164,6 +164,30 @@
       70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
       100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
+  
+    /* ── 버스 좌석표 ── */
+    .view-toggle{display:flex;gap:6px;margin-top:8px}
+    .view-toggle button{flex:1;padding:8px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-weight:700;font-size:.85rem;cursor:pointer}
+    .view-toggle button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .bus-chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0}
+    .seat-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:10px}
+    .seat-front{text-align:center;font-size:.75rem;color:#64748b;margin-bottom:6px;font-weight:700}
+    .seat-row{display:grid;grid-template-columns:22px 1fr 1fr 14px 1fr 1fr;gap:4px;margin-bottom:4px;align-items:stretch}
+    .seat-rn{font-size:.7rem;color:#64748b;display:flex;align-items:center;justify-content:center}
+    .seat{min-height:46px;border-radius:8px;border:2px solid transparent;font-size:.78rem;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:2px;line-height:1.15;word-break:keep-all;text-align:center}
+    .seat small{font-weight:500;font-size:.6rem;opacity:.75}
+    .seat.empty{background:#f1f5f9;color:#cbd5e1;cursor:default}
+    .seat.unchecked{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+    .seat.checked{background:#dcfce7;color:#166534;border-color:#86efac}
+    .seat-sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.2);border-radius:18px 18px 0 0;padding:16px;z-index:9999;display:none}
+    .seat-sheet .nm{font-size:1.15rem;font-weight:800}
+    .seat-sheet .sub{font-size:.8rem;color:#64748b;margin-bottom:10px}
+    .seat-sheet .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+    .seat-sheet a,.seat-sheet button{flex:1;min-width:30%;text-align:center;padding:12px 6px;border-radius:10px;border:none;font-weight:700;font-size:.9rem;text-decoration:none;cursor:pointer}
+    .seat-sheet .call{background:#dbeafe;color:#1d4ed8}
+    .seat-sheet .ok{background:var(--primary);color:#fff}
+    .seat-sheet .undo{background:#fef3c7;color:#92400e}
+    .seat-sheet .close{background:#f1f5f9;color:#334155}
   </style>
 </head>
 <body>
@@ -295,6 +319,16 @@
         </select>
       </div>
 
+      <div class="view-toggle">
+        <button id="vtList" class="active" onclick="setSeatView(false)">📋 목록</button>
+        <button id="vtSeat" onclick="setSeatView(true)">🚌 좌석표</button>
+      </div>
+      <div id="seatView" style="display:none">
+        <div class="bus-chips" id="busChips"></div>
+        <div id="seatChart"></div>
+        <div style="text-align:center;margin:8px 0"><button class="btn btn-check" onclick="loadSeating(true)">🔄 좌석 새로고침</button></div>
+      </div>
+      <div id="seatSheet" class="seat-sheet"></div>
       <div id="assemblyList"></div>
 
       <div class="section-label">관리 도구</div>
@@ -1279,8 +1313,90 @@
           </div>
         `;
       });
+      if (seatMode) renderSeatChart();
       document.getElementById('assemblyList').innerHTML = html || '<p style="text-align:center; padding:20px;">참가 학생 데이터가 없습니다.</p>';
     }
+
+
+    // ── 버스 좌석표 ──
+    let seatMode = false, seatData = null, seatBus = null;
+    const SEAT_COLORS = ['#fef9c3','#fce7f3','#dbeafe','#ede9fe','#ffedd5','#cffafe','#fae8ff','#ecfccb'];
+
+    function setSeatView(on) {
+      seatMode = on;
+      document.getElementById('vtList').classList.toggle('active', !on);
+      document.getElementById('vtSeat').classList.toggle('active', on);
+      document.getElementById('seatView').style.display = on ? 'block' : 'none';
+      document.getElementById('assemblyList').style.display = on ? 'none' : 'block';
+      closeSeatSheet();
+      if (on) { if (!seatData) loadSeating(); else renderSeatChart(); }
+    }
+
+    function loadSeating() {
+      document.getElementById('seatChart').innerHTML = '<p style="text-align:center;padding:20px;color:#64748b">좌석표 불러오는 중…</p>';
+      callApi('getSeating').then(function(res) {
+        seatData = res.seats || [];
+        renderSeatChart();
+      }).catch(function() {
+        document.getElementById('seatChart').innerHTML = '<p style="text-align:center;padding:20px;color:#b91c1c">좌석표를 불러오지 못했어요. 인터넷/배포 버전을 확인하세요.</p>';
+      });
+    }
+
+    function seatStudent(e) {
+      return fullStudents.find(function(s) { return s.gradeClass === e.gradeClass && s.name === e.name; });
+    }
+
+    function renderSeatChart() {
+      const box = document.getElementById('seatChart');
+      if (!seatData) return;
+      if (!seatData.length) { box.innerHTML = '<p style="text-align:center;padding:20px;color:#64748b">\'좌석배정\' 시트에 데이터가 없어요.<br>시트 메뉴 [🚌 좌석 배정 → 테스트용 시트 만들기]를 실행하세요.</p>'; document.getElementById('busChips').innerHTML=''; return; }
+      const buses = Array.from(new Set(seatData.map(function(e) { return e.bus; })))
+        .sort(function(a, b) { return parseInt(a) - parseInt(b); });
+      if (!seatBus || buses.indexOf(seatBus) < 0) seatBus = buses[0];
+      document.getElementById('busChips').innerHTML = buses.map(function(b) {
+        const es = seatData.filter(function(e) { return e.bus === b; });
+        const done = es.filter(function(e) { const st = seatStudent(e); return st && st.checkedAssembly; }).length;
+        return '<div class="chip ' + (b === seatBus ? 'active' : '') + '" onclick="seatBus=\'' + b + '\';renderSeatChart()">' + b + ' ' + done + '/' + es.length + '</div>';
+      }).join('');
+      const map = {};
+      seatData.filter(function(e) { return e.bus === seatBus; }).forEach(function(e) { map[e.seat] = e; });
+      let html = '<div class="seat-wrap"><div class="seat-front">⬆ 앞 (기사석)</div>';
+      for (let r = 1; r <= 10; r++) {
+        html += '<div class="seat-row" style="background:' + SEAT_COLORS[(r - 2 + 8) % 8] + '33;border-radius:8px"><div class="seat-rn">' + r + '</div>';
+        for (let n = 1; n <= 4; n++) {
+          if (n === 3) html += '<div></div>';
+          const id = r + '-' + n, e = map[id];
+          if (!e) { html += '<div class="seat empty">·</div>'; continue; }
+          const st = seatStudent(e), chk = st && st.checkedAssembly;
+          html += '<div class="seat ' + (chk ? 'checked' : 'unchecked') + '" onclick="openSeatSheet(\'' + id + '\')">' + e.name + '<small>' + e.gradeClass + (chk ? ' ✔' : '') + '</small></div>';
+        }
+        html += '</div>';
+      }
+      box.innerHTML = html + '</div>';
+    }
+
+    function openSeatSheet(id) {
+      const e = seatData.find(function(x) { return x.bus === seatBus && x.seat === id; });
+      if (!e) return;
+      const st = seatStudent(e);
+      const sh = document.getElementById('seatSheet');
+      const idx = fullStudents.indexOf(st);
+      const chk = st && st.checkedAssembly;
+      let h = '<div class="nm">' + e.name + ' <span style="font-size:.8rem;color:#64748b">' + e.gradeClass + ' · ' + e.bus + ' ' + id + '</span></div>';
+      h += '<div class="sub">' + (chk ? '✔ 확인됨' : '❗ 아직 확인 안 됨') + '</div><div class="row">';
+      if (st && st.studentTel) h += '<a class="call" href="tel:' + st.studentTel + '">📞 학생</a>';
+      if (st && st.parent1Tel) h += '<a class="call" href="tel:' + st.parent1Tel + '">📞 보호자1</a>';
+      if (st && st.parent2Tel) h += '<a class="call" href="tel:' + st.parent2Tel + '">📞 보호자2</a>';
+      h += '</div><div class="row">';
+      if (st) h += chk ? '<button class="undo" onclick="seatToggle(' + idx + ')">확인 취소</button>' : '<button class="ok" onclick="seatToggle(' + idx + ')">✔ 확인</button>';
+      h += '<button class="close" onclick="closeSeatSheet()">닫기</button></div>';
+      if (!st) h += '<div class="sub">명단에서 이 학생을 찾지 못했어요 (반/이름 확인)</div>';
+      sh.innerHTML = h; sh.style.display = 'block';
+    }
+
+    function closeSeatSheet() { const sh = document.getElementById('seatSheet'); if (sh) sh.style.display = 'none'; }
+
+    function seatToggle(idx) { toggleTeacherCheck(idx); closeSeatSheet(); }
 
     function toggleTeacherCheck(idx) {
       const s = fullStudents[idx];
