@@ -440,19 +440,24 @@
       <div class="info-card">
         <h3>🔋 위탁 절대 금지 · 기내만 휴대 가능</h3>
         <div class="pill-row">
-          <span class="pill no">보조배터리</span><span class="pill no">라이터 (1인 1개)</span>
-          <span class="pill no">전자담배</span>
+          <span class="pill no">보조배터리</span>
         </div>
         <p class="muted" style="margin-top:10px;">보조배터리는 160Wh 이하만, 1인 2개까지 기내 휴대할 수 있어요. 100Wh를 넘으면 항공사 승인이 필요하고 160Wh를 넘으면 반입할 수 없어요. 단자는 절연테이프나 파우치로 보호하고, 기내 선반에는 두지 말고 비행 중 충전도 하지 마세요. (참고: 20,000mAh는 약 74Wh로 보통 가능하지만, 제품 표기의 Wh를 꼭 확인하세요.)</p>
+      </div>
+      <div class="info-card">
+        <h3>🚫 학생은 소지 금지 (기내·위탁 모두 안 돼요)</h3>
+        <div class="pill-row">
+          <span class="pill no">라이터</span><span class="pill no">전자담배</span><span class="pill no">부탄가스 등 인화성 가스</span>
+        </div>
+        <p class="muted" style="margin-top:10px;">라이터와 전자담배는 학생 신분에 맞지 않아 아예 가져오지 않아요.</p>
       </div>
       <div class="info-card">
         <h3>🎒 위탁수하물로만 가능 (기내 반입 금지)</h3>
         <div class="pill-row">
           <span class="pill limit">칼·도검류</span><span class="pill limit">가위</span>
         </div>
-        <p class="muted" style="margin-top:10px;">인화성 가스·액체(부탄가스 등)는 기내·위탁 모두 안 돼요. 위탁하는 스프레이류(인화성 없는 것)는 총 2kg(2L) 이내, 개당 500ml 이하로 챙기세요.</p>
+        <p class="muted" style="margin-top:10px;">인화성 가스·액체(부탄가스, 인화성 살충제 등)는 기내·위탁 모두 안 돼요. 헤어스프레이·데오도란트 같은 인체용 스프레이는 국내선에서 기내·위탁 모두 가능하며, 용기당 500ml 이하·1인 총 2L 이내로 챙기세요.</p>
       </div>
-      <div class="warn-banner">⚠️ 물놀이·액티비티 체험이 있는 조는 여벌옷과 수건을 위탁수하물에 미리 챙기세요. 젖은 옷은 비닐 지퍼백에 별도 포장을 권장합니다.</div>
       <div class="info-card">
         <h2>📋 준비물 체크리스트</h2>
         <div id="prepChecklist"></div>
@@ -1384,7 +1389,7 @@
     }
 
     const PREP_ITEMS = ['학생증 / 신분증', '멀미약, 개인 상비약', '편한 운동화, 여벌 양말', '우산 또는 우비',
-      '수건·여벌옷 (물놀이·체험 조)', '보조배터리 (기내 휴대용)', '모자·선크림 (야외 활동 대비)'];
+      '보조배터리 (기내 휴대용)', '모자·선크림 (야외 활동 대비)'];
 
     function renderPrepChecklist() {
       let saved = {};
