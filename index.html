@@ -671,6 +671,7 @@
         const teacherSel = document.getElementById('teacherEventTypeSelect');
         if (teacherSel) teacherSel.innerHTML = buildEventTypeOptionsHtml(getAllCourseNames());
         renderGroupChips();
+        if (document.getElementById('tab-course').style.display === 'block') renderCourseTab();
       }).catch(function(err) {
         console.error('조/코스 설정 로드 실패:', err);
       });
@@ -928,6 +929,8 @@
 
       renderClassNotice(cls);
       if (scheduleListOpen) renderScheduleList();
+      courseTabClass = '';
+      if (document.getElementById('tab-course').style.display === 'block') renderCourseTab();
     }
 
     // 조 필터 칩 렌더링 (조편성 시트에 데이터가 있을 때만 표시)
@@ -1411,34 +1414,42 @@
       try { localStorage.setItem('suhak2026_prepChecklist', JSON.stringify(saved)); } catch (e) {}
     }
 
+    // courseTabClass: 코스 안내 탭에서 칩으로 직접 고른 반(없으면 체크인에서 고른 반을 따라감)
     let courseTabClass = '';
 
+    function getCurrentClassForInfo() {
+      const sel = document.getElementById('studentClassSelect').value;
+      if (sel) return sel;
+      if (typeof currentClass !== 'undefined' && currentClass && currentClass !== '전체') return currentClass;
+      return '';
+    }
+
     function renderCourseTab() {
-      // 반이 정해져 있으면(링크 ?class= 또는 체크인 화면에서 선택) 그 반을 기본으로 보여줍니다.
-      if (!courseTabClass) {
-        courseTabClass = document.getElementById('studentClassSelect').value || '';
-      }
-      const classes = ['1반','2반','3반','4반','5반','6반','7반','8반','9반','10반'];
+      // 직접 고른 반이 없으면 체크인 화면에서 선택한 반(또는 링크 ?class=, 교사 반 필터)을 그대로 따라갑니다.
+      const cls = courseTabClass || getCurrentClassForInfo();
       const locked = document.getElementById('studentClassSelect').disabled;
+      const lockedCls = document.getElementById('studentClassSelect').value;
+      const classes = ['1반','2반','3반','4반','5반','6반','7반','8반','9반','10반'];
       document.getElementById('courseClassChips').innerHTML = classes.map(function(c) {
-        const disabled = locked && c !== document.getElementById('studentClassSelect').value;
-        return '<div class="chip ' + (c === courseTabClass ? 'active' : '') + '" style="' + (disabled ? 'opacity:.4;pointer-events:none;' : '') +
+        const disabled = locked && c !== lockedCls;
+        return '<div class="chip ' + (c === cls ? 'active' : '') + '" style="' + (disabled ? 'opacity:.4;pointer-events:none;' : '') +
           '" onclick="courseTabClass=\'' + c + '\';renderCourseTab()">' + c + '</div>';
       }).join('');
 
       const body = document.getElementById('courseTabBody');
-      if (!courseTabClass) {
+      if (!cls) {
         body.innerHTML = '<p class="muted">위에서 반을 선택해 주세요.</p>';
         return;
       }
-      const group = courseConfig.classToGroup[courseTabClass];
+      // 조편성 시트에서 이 반이 속한 팀을 찾아 그 팀의 코스 일정을 그대로 보여줍니다(팀명은 따로 고르지 않아도 됨).
+      const group = courseConfig.classToGroup[cls];
       const courses = group ? (courseConfig.groupCourses[group] || []) : [];
       if (!courses.length) {
-        body.innerHTML = '<p class="muted">' + courseTabClass + ' 일정이 아직 등록되지 않았어요.</p>';
+        body.innerHTML = '<h2>' + cls + ' 코스 안내</h2><p class="muted">' + (Object.keys(courseConfig.classToGroup || {}).length ? cls + ' 일정이 아직 등록되지 않았어요.' : '일정을 불러오는 중이에요...') + '</p>';
         return;
       }
       let lastDay = '';
-      let html = '<h2>' + courseTabClass + ' · ' + group + '</h2>';
+      let html = '<h2>' + cls + ' 코스 안내</h2>';
       courses.forEach(function(name, idx) {
         const dayMatch = name.match(/^\[(\d)일차\]/);
         const day = dayMatch ? dayMatch[1] + '일차' : '';
@@ -1453,6 +1464,7 @@
 
     function filterClass(cls) {
       currentClass = cls;
+      courseTabClass = '';
       document.querySelectorAll('#globalClassChips .chip').forEach(c => c.classList.toggle('active', c.innerText === cls));
 
       if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
