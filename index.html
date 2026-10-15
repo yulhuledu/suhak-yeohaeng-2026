@@ -240,6 +240,7 @@
     <button class="top-nav-btn" id="navBtnCourse" onclick="openInfoTab('tab-course')">🗺️ 코스 안내</button>
     <button class="top-nav-btn" id="navBtnRollcall" style="display:none;" onclick="requireTeacherAuth('tab-rollcall')">🛏️ 방배치도</button>
     <button class="top-nav-btn" id="navBtnContacts" style="display:none;" onclick="requireTeacherAuth('tab-contacts')">📞 비상연락망</button>
+    <button class="top-nav-btn" id="navBtnNotice" style="display:none;" onclick="requireTeacherAuth('tab-notice')">📢 공지 문구</button>
   </div>
 
   <div class="container">
@@ -490,6 +491,34 @@
       <div id="femaleRoomList"></div>
       <div style="color:#2563eb; font-weight:800; font-size:0.95rem; margin:14px 0 6px 4px;">👦 남학생 호실 (A동)</div>
       <div id="maleRoomList"></div>
+    </div>
+
+    <!-- 6. 공지 문구 복사 (교사 전용) -->
+    <div id="tab-notice" style="display:none;">
+      <div class="info-card">
+        <h2>📢 반 공지 문구 만들기</h2>
+        <p class="muted">코스를 고르고 시간을 적으면 반공지 형식의 문구가 만들어져요. 아래 미리보기는 직접 고쳐도 되고, [복사] 버튼으로 바로 붙여넣을 수 있어요.</p>
+        <div style="margin-top:10px;">
+          <label style="display:block; margin-bottom:4px; font-size:0.78rem; color:var(--gray);">코스</label>
+          <select class="control-select" id="noticeCourseSelect" style="width:100%;" onchange="onNoticeCourseChange()"></select>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <div style="flex:1;">
+            <label id="noticeDurLabel" style="display:block; margin-bottom:4px; font-size:0.78rem; color:var(--gray);">예상활동시간</label>
+            <input type="text" id="noticeDurInput" class="control-select" style="width:100%; font-weight:600;" placeholder="예: 약 40분" oninput="buildNotice()">
+          </div>
+          <div style="flex:1;">
+            <label id="noticeAsmLabel" style="display:block; margin-bottom:4px; font-size:0.78rem; color:var(--gray);">집결시간</label>
+            <input type="text" id="noticeAsmInput" class="control-select" style="width:100%; font-weight:600;" placeholder="예: 16:00" oninput="buildNotice()">
+          </div>
+        </div>
+      </div>
+      <div class="info-card">
+        <h3>미리보기 (수정 가능)</h3>
+        <textarea id="noticePreview" style="width:100%; min-height:340px; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:0.9rem; line-height:1.6; font-family:inherit; resize:vertical;"></textarea>
+        <button id="noticeCopyBtn" onclick="copyNotice()" style="margin-top:10px; width:100%; padding:12px; border:none; border-radius:10px; background:var(--primary); color:#fff; font-weight:800; font-size:0.95rem; cursor:pointer;">📋 복사하기</button>
+        <p class="muted" id="noticeCopyMsg" style="margin-top:6px; min-height:1.2em;"></p>
+      </div>
     </div>
 
     <!-- 3. 비상연락망 탭 -->
@@ -1184,6 +1213,7 @@
     function updateTeacherOnlyNavVisibility() {
       document.getElementById('navBtnRollcall').style.display = isTeacher ? '' : 'none';
       document.getElementById('navBtnContacts').style.display = isTeacher ? '' : 'none';
+      document.getElementById('navBtnNotice').style.display = isTeacher ? '' : 'none';
     }
 
     function requireTeacherAuth(targetTab) {
@@ -1328,6 +1358,11 @@
         document.getElementById('navBtnContacts').classList.add('active');
         document.getElementById('tab-contacts').style.display = 'block';
         renderContacts();
+      } else if (tabKey === 'tab-notice') {
+        document.getElementById('globalClassChips').style.display = 'none';
+        document.getElementById('navBtnNotice').classList.add('active');
+        document.getElementById('tab-notice').style.display = 'block';
+        initNoticeTab();
       }
     }
 
@@ -1360,10 +1395,124 @@
     }
 
 
+
+    // ── 공지 문구 (교사 전용: 코스 선택 → 시간 입력 → 미리보기 → 복사) ──
+    const NOTICE_MEAL_LINES = ['4인 1조(1테이블)로 식사하니 미리 4명씩 모둠을 만들어 함께 입장해주세요', '4명이 되지 않는 경우 선생님이 자리를 배치하니 양해 부탁드립니다', '식사 후에 식당 밖을 마음대로 돌아다니지 마세요'];
+    const NOTICE_ALLERGY = '음식 알레르기가 있는 학생은 미리 선생님께 알려주세요';
+    const NOTICE_TEMPLATES = [
+      { key: '식사모둠', icon: '🍽️', titleLabel: '식사 안내', title: '4인 1조 모둠 식사', dur: null, asm: { label: '모둠 구성', def: '식당 도착 전까지 완료' }, warn: '🚫꼭 확인해주세요🚫',
+        cautions: ['식당에서는 4인 1조(1테이블)로 식사합니다', '이동 중에 미리 4명씩 모둠을 만들어 두고, 식당에는 모둠끼리 함께 입장해주세요', '4명이 되지 않는 경우에는 선생님이 자리를 배치하니 양해 부탁드립니다', '모둠 구성이 끝나면 담임선생님의 안내를 따라주세요'] },
+      { key: '학교집결', title: '학교 집결 후 전용버스로 김포공항 이동', dur: { label: '예상이동시간' }, asm: { label: '집결시간', def: '08:00 (출발 08:30)' },
+        cautions: ['집결 장소는 학교 옆 버스 정류장 앞입니다. 늦지 않게 모여주세요', '생년월일이 적힌 학생증 또는 청소년증 원본을 꼭 챙겨주세요 (사본·사진은 사용 불가)', '캐리어는 위탁수하물로 준비하고, 기내에는 가방 1개와 개인 물품 1개(합쳐서 10kg 이내)만 들고 탑승합니다', '보조배터리는 기내에 직접 소지하고, 칼·가위는 캐리어에 넣어 위탁해주세요', '라이터·전자담배는 기내·위탁 모두 가져오면 안 됩니다'] },
+      { key: '김포집결', title: '김포공항 국내선 1층 6번 게이트 (롯데리아 앞)', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['반별로 줄을 맞춰 정렬하고, 개인 행동은 하지 말아주세요', '신분증은 캐리어에 넣지 말고 몸에 지니고 있어주세요', '위탁수하물은 안내받은 무게를 지켜주세요 (초과 시 개인 추가 요금)', '보안검사장이 혼잡하니 선생님 안내에 따라 질서 있게 이동해주세요'] },
+      { key: '푸드코트', title: '김포공항 푸드코트 (점심)', dur: { label: '예상식사시간' }, asm: { label: '집결시간' },
+        cautions: ['정해진 시간 안에 식사하고 집결 장소로 돌아와주세요', '식사 장소를 벗어나 혼자 돌아다니지 마세요', '음식 알레르기가 있는 학생은 메뉴 선택 전 선생님께 알려주세요', '식사 후 쓰레기와 자리는 깨끗이 정리해주세요'] },
+      { key: '비행기', title: '제주항공 탑승', dur: { label: '예상비행시간' }, asm: { label: '탑승 집결시간' },
+        cautions: ['지정된 좌석에 앉고 안전벨트를 꼭 착용해주세요', '화장실 이용 외에는 자리에서 이동하지 마세요', '기내에서는 휴대전화 등 전자기기를 사용하지 않습니다', '보조배터리는 선반에 두지 말고 몸 가까이에 보관하며, 비행 중에는 충전하지 않습니다', '내릴 때 휴대폰·카메라 등 소지품을 꼭 확인해주세요'] },
+      { key: '제주도착', title: '제주공항 도착 후 전용버스 탑승', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['내리기 전에 좌석 주변과 선반에 두고 내리는 물건이 없는지 확인해주세요', '위탁수하물은 본인 짐이 맞는지 확인하고 찾아주세요', '짐을 찾은 뒤에는 개인 행동 없이 반별 집결 장소로 모여주세요'] },
+      { key: '아레나엑스', title: '아레나엑스 (실내 서바이벌 게임)', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['안전요원의 사전 안전교육과 지시를 꼭 따라주세요', '레이저건은 사람 얼굴을 향해 겨누지 말고 정해진 방식대로만 사용해주세요', '경기장 안에서는 뛰거나 무리하게 움직이지 말고 친구와 부딪히지 않게 주변을 살펴주세요', '안경·액세서리는 미리 안전하게 보관한 뒤 참여해주세요'] },
+      { key: '오설록', title: '오설록 티뮤지엄', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['전시 공간과 티클래스에서는 조용히 해주세요', '전시물과 찻잔 등은 허락 없이 만지지 마세요', '녹차밭 산책로에서 사진을 찍을 때 다른 관람객과 부딪히지 않게 조심해주세요', '집결 시간·장소를 꼭 확인하고 늦지 않게 돌아와주세요'] },
+      { key: '샹그릴라', title: '샹그릴라 요트체험', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['승선 전에 구명조끼를 꼭 입고, 안전요원에게 착용 상태를 확인받아주세요', '요트 위에서는 뛰거나 밀치는 장난을 하지 마세요', '승하선은 안전요원의 안내에 따라 한 명씩 순서대로 해주세요', '멀미가 나거나 몸이 불편하면 참지 말고 바로 선생님께 알려주세요', '휴대폰·모자 등이 바다에 떨어지지 않게 조심해서 관리해주세요'] },
+      { key: '올레시장', title: '서귀포 매일올레시장', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['시장이 붐비니 친구들과 함께 다니고 혼자 떨어지지 마세요', '집결 시간과 장소를 꼭 확인하고 휴대폰으로 시간을 자주 확인해주세요', '골목에 오토바이·전동 킥보드가 다닐 수 있으니 주변을 살피며 걸어주세요', '간식은 위생 상태를 확인하고 과식하지 않도록 해주세요'] },
+      { key: '동화마을', title: '제주 동화마을', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['부지가 넓으니 혼자 다니지 말고 집결 시간과 장소를 꼭 확인해주세요', '돌 조형물과 나무, 시설물에는 올라가거나 매달리지 말고 함부로 만지지 마세요', '인공폭포와 물가에서는 장난치지 말고 안전거리를 지켜주세요', '야외가 많으니 날씨에 맞게 옷차림을 챙겨주세요', '카페·매장에서는 다른 손님을 배려하고 질서를 지켜주세요'] },
+      { key: '레일바이크', title: '제주 레일바이크', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['운행 중에는 안전바를 꼭 잡고, 일어서거나 몸을 밖으로 내밀지 마세요', '탑승과 하차는 바이크가 완전히 멈춘 뒤에만 해주세요', '앞뒤 바이크와 간격을 유지하고, 주변 동식물에 손을 뻗지 마세요', '동물 먹이 주기 체험 때는 동물이 놀라지 않게 천천히 다가가주세요'] },
+      { key: '981파크', title: '9.81파크', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ["방문 전에 '9.81 PARK' 앱을 미리 설치하고, 체험 전에 앱에서 안전 영상을 끝까지 시청해주세요", '레이싱 체험 때는 안전벨트·헬멧 등 지급된 안전장비를 꼭 착용해주세요', '진행 요원이 안내하는 속도·코스·규칙을 꼭 지켜주세요', '앞차와 안전거리를 유지하고, 추월이나 급정거 같은 위험한 행동은 하지 마세요'] },
+      { key: '한담', title: '한담공원 (해안 산책로·카페거리)', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['해안 바위는 미끄럽고 파도가 갑자기 밀려올 수 있으니 물가에 가까이 가지 마세요', '산책로 밖 갯바위나 절벽 쪽으로는 절대 내려가지 마세요', '카페거리 골목에는 차량·자전거·전동 킥보드가 다니니 좌우를 살피며 걸어주세요', '정해진 자유시간과 집결 장소를 꼭 지켜주세요'] },
+      { key: '고기장', title: '고기장 (석식 · 무한리필 + 라면 + 음료)', dur: { label: '예상식사시간' }, asm: { label: '집결시간' },
+        cautions: NOTICE_MEAL_LINES.concat(['고기는 완전히 익혀서 먹어주세요', '집게와 가위는 불판 위에 올려 두지 마세요 (화상 주의)', NOTICE_ALLERGY]) },
+      { key: '오름밥상', title: '오름밥상 (중식 · 정찬 한상 + 갈치전)', dur: { label: '예상식사시간' }, asm: { label: '집결시간' },
+        cautions: NOTICE_MEAL_LINES.concat(['갈치전 등 생선 가시에 주의하고, ' + NOTICE_ALLERGY.replace('음식 알레르기가 있는 학생은', '알레르기가 있는 학생은')]) },
+      { key: '전원일기', title: '전원일기 동광점 (중식 · 쌈밥정식)', dur: { label: '예상식사시간' }, asm: { label: '집결시간' },
+        cautions: NOTICE_MEAL_LINES.concat([NOTICE_ALLERGY]) },
+      { key: '소플러스', title: '소플러스 (석식 · 소불고기 전골)', dur: { label: '예상식사시간' }, asm: { label: '집결시간' },
+        cautions: NOTICE_MEAL_LINES.concat(['전골은 국물이 끓고 뜨거우니 화상에 주의해주세요', NOTICE_ALLERGY]) },
+      { key: '숙소', title: '숙소 도착 후 객실 입실', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
+        cautions: ['배정된 본인 방에서만 지내고, 다른 방에는 마음대로 들어가지 마세요', '객실 키는 방마다 1개이고 방장이 관리합니다', '숙소 밖으로 나가는 개인 행동·외출은 절대 금지입니다', '베란다·난간으로 이동하지 마세요 (추락 위험)', '숙소 시설과 비품을 파손하면 변상해야 하니 조심히 사용해주세요'] },
+      { key: '청북고의밤', title: '청북고의 밤 (레크리에이션·장기자랑)', dur: { label: '예상활동시간', def: '20:00~22:00' }, asm: { label: '집결시간' },
+        cautions: ['정해진 장소를 벗어나지 마세요', '무대와 행사 중에 밀거나 뛰는 등 위험한 행동을 하지 마세요', '타인에게 불쾌감을 주는 말이나 표현은 절대 금지입니다', '행사가 끝나면 질서 있게 이동해 취침 준비를 해주세요'] },
+      { key: '취침', title: '인원 점검(점호) 후 취침', dur: null, asm: { label: '점호 시간' },
+        cautions: ['정해진 시간까지 본인 방으로 꼭 돌아와주세요', '점호 때는 본인 방에서 인원 확인에 협조해주세요', '숙소 밖 무단 외출은 절대 금지이고, 몸이 아프면 바로 선생님께 알려주세요', '소등 후에는 조용히 하고 다른 방 친구들을 배려해주세요'] },
+      { key: '제주공항', title: '제주공항 (탑승수속)', dur: { label: '예상이동시간' }, asm: { label: '집결시간' },
+        cautions: ['숙소와 버스에 두고 가는 짐이 없는지 마지막으로 확인해주세요', '신분증은 캐리어에 넣지 말고 몸에 지니고 있어주세요', '위탁수하물 무게 안내를 지키고, 보조배터리는 기내에 직접 가지고 탑승해주세요', '인원 점검과 탑승수속이 끝날 때까지 개인 행동은 하지 마세요'] },
+      { key: '김포도착', title: '김포공항 도착 후 전용버스로 학교 이동', dur: { label: '예상이동시간' }, asm: { label: '집결시간' },
+        cautions: ['좌석과 선반에 두고 내리는 물건이 없는지 확인해주세요', '위탁수하물을 찾은 뒤 반별 집결 장소로 모여주세요', '버스 탑승 후에는 안전벨트를 꼭 착용해주세요'] },
+      { key: '학교도착', title: '학교 도착 후 일정 종료', dur: null, asm: { label: '하차 후 해산', def: '담임선생님 안내에 따라' },
+        cautions: ['하차 전에 좌석 주변에 두고 내리는 물건이 없는지 다시 확인해주세요', '버스가 완전히 멈춘 뒤 선생님 안내에 따라 질서 있게 내려주세요', '귀가하기 전까지 인솔 선생님의 지시를 따라주세요', '귀가 시간이 늦으니 대중교통 이용이 어려운 학생은 미리 부모님과 상의하거나 방향이 같은 친구들과 함께 귀가할 수 있도록 조율해주세요'] }
+    ];
+    let noticeInited = false;
+
+    function initNoticeTab() {
+      const sel = document.getElementById('noticeCourseSelect');
+      if (!noticeInited) {
+        sel.innerHTML = NOTICE_TEMPLATES.map(function(t, i) {
+          return '<option value="' + i + '">' + (t.key === '식사모둠' ? '🍽️ ' : '') + t.title + '</option>';
+        }).join('');
+        noticeInited = true;
+      }
+      onNoticeCourseChange();
+    }
+
+    function onNoticeCourseChange() {
+      const t = NOTICE_TEMPLATES[Number(document.getElementById('noticeCourseSelect').value) || 0];
+      const durInput = document.getElementById('noticeDurInput');
+      const asmInput = document.getElementById('noticeAsmInput');
+      const durBox = durInput.parentElement;
+      if (t.dur) {
+        durBox.style.display = '';
+        document.getElementById('noticeDurLabel').innerText = t.dur.label;
+        durInput.value = t.dur.def || '';
+      } else {
+        durBox.style.display = 'none';
+        durInput.value = '';
+      }
+      document.getElementById('noticeAsmLabel').innerText = t.asm.label;
+      asmInput.value = t.asm.def || '';
+      buildNotice();
+    }
+
+    function buildNotice() {
+      const t = NOTICE_TEMPLATES[Number(document.getElementById('noticeCourseSelect').value) || 0];
+      const dur = document.getElementById('noticeDurInput').value.trim();
+      const asm = document.getElementById('noticeAsmInput').value.trim();
+      const lines = [(t.icon || '🏖️') + (t.titleLabel || '다음일정지') + ' : ' + t.title];
+      if (t.dur && dur) lines.push('🚌' + t.dur.label + ' : ' + dur);
+      if (asm) lines.push('🚦' + t.asm.label + ' : ' + asm);
+      lines.push(t.warn || '🚫주의사항🚫');
+      t.cautions.forEach(function(c) { lines.push('▶' + c); });
+      document.getElementById('noticePreview').value = lines.join('\n');
+      document.getElementById('noticeCopyMsg').innerText = '';
+    }
+
+    function copyNotice() {
+      const ta = document.getElementById('noticePreview');
+      const msg = document.getElementById('noticeCopyMsg');
+      const done = function() { msg.innerText = '✅ 복사했어요. 반공지에 붙여넣으세요.'; };
+      const fallback = function() {
+        try { ta.focus(); ta.select(); document.execCommand('copy'); done(); }
+        catch (e) { msg.innerText = '복사에 실패했어요. 미리보기를 길게 눌러 직접 복사해주세요.'; }
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ta.value).then(done).catch(fallback);
+      } else {
+        fallback();
+      }
+    }
+
     // ── 여행 준비 / 코스 안내 탭 (학생·교사 모두 볼 수 있음) ──
     function hideInfoTabs() {
       document.getElementById('tab-prep').style.display = 'none';
       document.getElementById('tab-course').style.display = 'none';
+      document.getElementById('tab-notice').style.display = 'none';
     }
 
     function openInfoTab(tabKey) {
