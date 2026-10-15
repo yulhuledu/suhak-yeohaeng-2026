@@ -153,9 +153,9 @@
     .building-plane-card.b-theme { background: #fff5f7; border-color: #fbcfe8; }
     .building-plane-card.a-theme { background: #f0f7ff; border-color: #bfdbfe; }
     .plane-grid-scroll { overflow-x: auto; padding: 8px 0; }
-    .plane-grid.compact { min-width: 0; gap: 4px; }
+    .plane-grid.compact { min-width: 0; gap: 4px; padding: 0 4px; }
     .plane-grid.compact .box-room { min-width: 0; padding: 9px 0; font-size: 0.78rem; border-radius: 6px; }
-    .plane-grid.compact .box-room.target { font-size: 0.85rem; transform: scale(1.12); }
+    .plane-grid.compact .box-room.target { font-size: 0.85rem; transform: scale(1.05); }
     .plane-grid.compact .box-room.ev { font-size: 0.6rem; letter-spacing: -0.5px; }
     .plane-grid.compact .plane-hall-cell { margin: 0 -2px; }
     .plane-hall-cell { background: #cbd5e1; height: 100%; min-height: 24px; margin: 0 -4px; }
@@ -573,8 +573,8 @@
       } else {
         for (let n = 30; n >= 22; n -= 2) cols.push({ top: rn(n), bottom: rn(n - 1) });   // 좌측: 30/29 … 22/21
         cols.push({ ev: true });
-        for (let n = 2; n <= 10; n += 2) cols.push({ top: rn(n), bottom: rn(n - 1) });   // 우측: 02/01 … 10/09
-        cols.push({ top: '', bottom: rn(11) });                                           // 우측 끝: 11호
+        cols.push({ top: '', bottom: rn(1) });                                            // 우측 첫 칸: 01호 (위쪽은 빈 공간)
+        for (let n = 2; n <= 10; n += 2) cols.push({ top: rn(n), bottom: rn(n + 1) });   // 우측: 02/03 … 10/11
       }
       return cols;
     }
@@ -1536,7 +1536,7 @@
 
       setTimeout(() => {
         const targetEl = document.querySelector('.box-room.target');
-        if (targetEl) {
+        if (targetEl && !compact) {
           targetEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
       }, 80);
