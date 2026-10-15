@@ -325,9 +325,6 @@
         <button class="sub-nav-btn" onclick="switchAssemblySub('student')">학생 직접 체크인</button>
       </div>
 
-      <!-- 조 필터 (조편성 시트에 데이터가 있을 때만 표시) -->
-      <div class="class-scroll" id="groupFilterChips" style="display:none;"></div>
-
       <div class="section-label">현재 집합 현황</div>
       <div class="status-card">
         <div class="status-header">
@@ -350,16 +347,6 @@
         </select>
       </div>
 
-      <div class="view-toggle">
-        <button id="vtList" class="active" onclick="setSeatView(false)">📋 목록</button>
-        <button id="vtSeat" onclick="setSeatView(true)">🚌 좌석표</button>
-      </div>
-      <div id="seatView" style="display:none">
-        <div class="bus-chips" id="busChips"></div>
-        <div id="seatChart"></div>
-        <div style="text-align:center;margin:8px 0"><button class="btn btn-check" onclick="loadSeating(true)">🔄 좌석 새로고침</button></div>
-      </div>
-      <div id="seatSheet" class="seat-sheet"></div>
       <div id="assemblyList"></div>
 
       <div class="section-label">관리 도구</div>
@@ -1476,10 +1463,6 @@
       let list = (currentClass === '전체' ? fullStudents : fullStudents.filter(s => s.gradeClass === currentClass))
         .filter(s => s.status === '참가');
 
-      if (currentGroupFilter !== '전체') {
-        list = list.filter(s => courseConfig.classToGroup[s.gradeClass] === currentGroupFilter);
-      }
-
       const checkedCount = list.filter(s => s.checkedAssembly).length;
       const totalCount = list.length;
       const percent = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
@@ -1509,7 +1492,6 @@
           </div>
         `;
       });
-      if (seatMode) renderSeatChart();
       document.getElementById('assemblyList').innerHTML = html || '<p style="text-align:center; padding:20px;">참가 학생 데이터가 없습니다.</p>';
     }
 
