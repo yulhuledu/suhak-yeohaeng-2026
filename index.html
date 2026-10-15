@@ -420,8 +420,8 @@
       </div>
       <div class="info-card">
         <h3>🪪 탑승 신분증 (가는 날·오는 날 모두 필요)</h3>
-        <div class="rule-line"><span class="k">인정 신분증</span><span class="v">학생증(생년월일 표기) · 청소년증 · 재학증명서 · 건강보험증 · 주민등록등본/초본</span></div>
-        <div class="rule-line"><span class="k">주의</span><span class="v">원본만 가능(사본 불가), 생년월일이 없으면 인정 안 됨</span></div>
+        <div class="rule-line"><span class="k">인정 신분증</span><span class="v">학생증(생년월일 표기) · 청소년증 · 주민등록증 · 재학증명서 · 건강보험증 · 주민등록등본/초본</span></div>
+        <div class="rule-line"><span class="k">주의</span><span class="v">원본만 가능(사본·사진 촬영본은 사용 불가), 생년월일이 없으면 인정 안 됨</span></div>
         <div class="rule-line"><span class="k">보관</span><span class="v">몸에 지니기 (캐리어에 넣지 않기)</span></div>
       </div>
       <div class="info-card">
@@ -1403,9 +1403,9 @@
       { key: '식사모둠', icon: '🍽️', titleLabel: '식사 안내', title: '4인 1조 모둠 식사', dur: null, asm: { label: '모둠 구성', def: '식당 도착 전까지 완료' }, warn: '🚫꼭 확인해주세요🚫',
         cautions: ['식당에서는 4인 1조(1테이블)로 식사합니다', '이동 중에 미리 4명씩 모둠을 만들어 두고, 식당에는 모둠끼리 함께 입장해주세요', '4명이 되지 않는 경우에는 선생님이 자리를 배치하니 양해 부탁드립니다', '모둠 구성이 끝나면 담임선생님의 안내를 따라주세요'] },
       { key: '학교집결', title: '학교 집결 후 전용버스로 김포공항 이동', dur: { label: '예상이동시간' }, asm: { label: '집결시간', def: '08:00 (출발 08:30)' },
-        cautions: ['집결 장소는 학교 옆 버스 정류장 앞입니다. 늦지 않게 모여주세요', '생년월일이 적힌 학생증 또는 청소년증 원본을 꼭 챙겨주세요 (사본·사진은 사용 불가)', '캐리어는 위탁수하물로 준비하고, 기내에는 가방 1개와 개인 물품 1개(합쳐서 10kg 이내)만 들고 탑승합니다', '보조배터리는 기내에 직접 소지하고, 칼·가위는 캐리어에 넣어 위탁해주세요', '라이터·전자담배는 기내·위탁 모두 가져오면 안 됩니다'] },
+        cautions: ['집결 장소는 학교 옆 버스 정류장 앞입니다. 늦지 않게 모여주세요', '생년월일이 적힌 학생증·청소년증·주민등록증 원본을 꼭 챙겨주세요 (사본·사진 촬영본은 사용 불가)', '캐리어는 위탁수하물로 준비하고, 기내에는 가방 1개와 개인 물품 1개(합쳐서 10kg 이내)만 들고 탑승합니다', '보조배터리는 기내에 직접 소지하고, 칼·가위는 캐리어에 넣어 위탁해주세요', '라이터·전자담배는 기내·위탁 모두 가져오면 안 됩니다'] },
       { key: '김포집결', title: '김포공항 국내선 1층 6번 게이트 (롯데리아 앞)', dur: { label: '예상활동시간' }, asm: { label: '집결시간' },
-        cautions: ['반별로 줄을 맞춰 정렬하고, 개인 행동은 하지 말아주세요', '신분증은 캐리어에 넣지 말고 몸에 지니고 있어주세요', '위탁수하물은 안내받은 무게를 지켜주세요 (초과 시 개인 추가 요금)', '보안검사장이 혼잡하니 선생님 안내에 따라 질서 있게 이동해주세요'] },
+        cautions: ['반별로 줄을 맞춰 정렬하고, 개인 행동은 하지 말아주세요', '신분증(학생증·청소년증·주민등록증)은 원본만 가능하고 사진·사본은 안 되니, 캐리어에 넣지 말고 몸에 지니고 있어주세요', '위탁수하물은 안내받은 무게를 지켜주세요 (초과 시 개인 추가 요금)', '보안검사장이 혼잡하니 선생님 안내에 따라 질서 있게 이동해주세요'] },
       { key: '푸드코트', title: '김포공항 푸드코트 (점심)', dur: { label: '예상식사시간' }, asm: { label: '집결시간' },
         cautions: ['정해진 시간 안에 식사하고 집결 장소로 돌아와주세요', '식사 장소를 벗어나 혼자 돌아다니지 마세요', '음식 알레르기가 있는 학생은 메뉴 선택 전 선생님께 알려주세요', '식사 후 쓰레기와 자리는 깨끗이 정리해주세요'] },
       { key: '비행기', title: '제주항공 탑승', dur: { label: '예상비행시간' }, asm: { label: '탑승 집결시간' },
@@ -1443,7 +1443,7 @@
       { key: '취침', title: '인원 점검(점호) 후 취침', dur: null, asm: { label: '점호 시간' },
         cautions: ['정해진 시간까지 본인 방으로 꼭 돌아와주세요', '점호 때는 본인 방에서 인원 확인에 협조해주세요', '숙소 밖 무단 외출은 절대 금지이고, 몸이 아프면 바로 선생님께 알려주세요', '소등 후에는 조용히 하고 다른 방 친구들을 배려해주세요'] },
       { key: '제주공항', title: '제주공항 (탑승수속)', dur: { label: '예상이동시간' }, asm: { label: '집결시간' },
-        cautions: ['숙소와 버스에 두고 가는 짐이 없는지 마지막으로 확인해주세요', '신분증은 캐리어에 넣지 말고 몸에 지니고 있어주세요', '위탁수하물 무게 안내를 지키고, 보조배터리는 기내에 직접 가지고 탑승해주세요', '인원 점검과 탑승수속이 끝날 때까지 개인 행동은 하지 마세요'] },
+        cautions: ['숙소와 버스에 두고 가는 짐이 없는지 마지막으로 확인해주세요', '신분증(학생증·청소년증·주민등록증)은 원본만 가능하고 사진·사본은 안 되니, 캐리어에 넣지 말고 몸에 지니고 있어주세요', '위탁수하물 무게 안내를 지키고, 보조배터리는 기내에 직접 가지고 탑승해주세요', '인원 점검과 탑승수속이 끝날 때까지 개인 행동은 하지 마세요'] },
       { key: '김포도착', title: '김포공항 도착 후 전용버스로 학교 이동', dur: { label: '예상이동시간' }, asm: { label: '집결시간' },
         cautions: ['좌석과 선반에 두고 내리는 물건이 없는지 확인해주세요', '위탁수하물을 찾은 뒤 반별 집결 장소로 모여주세요', '버스 탑승 후에는 안전벨트를 꼭 착용해주세요'] },
       { key: '학교도착', title: '학교 도착 후 일정 종료', dur: null, asm: { label: '하차 후 해산', def: '담임선생님 안내에 따라' },
@@ -1537,15 +1537,16 @@
       }
     }
 
-    const PREP_ITEMS = ['학생증 / 신분증', '멀미약, 개인 상비약', '편한 운동화, 여벌 양말', '우산 또는 우비',
-      '보조배터리 (기내 휴대용)', '모자·선크림 (야외 활동 대비)'];
+    const PREP_ITEMS = ['학생증 / 신분증 (원본, 사진·사본 불가)', '멀미약, 개인 상비약', '편한 운동화, 활동복', '여벌 옷, 양말', '겉옷·바람막이 (바닷바람, 아침저녁 쌀쌀)',
+      '잠옷 (편한 실내복)', '칫솔·치약 등 세면도구', '우산 또는 우비', '보조배터리 (기내 휴대용)', '충전기·케이블', '모자·선크림 (야외 활동 대비)',
+      '9.81파크 앱 설치 + 안전 영상 시청 (출발 전)'];
 
     function renderPrepChecklist() {
       let saved = {};
       try { saved = JSON.parse(localStorage.getItem('suhak2026_prepChecklist') || '{}'); } catch (e) {}
       const box = document.getElementById('prepChecklist');
       box.innerHTML = PREP_ITEMS.map(function(t, i) {
-        return '<label class="check-item' + (saved[i] ? ' done' : '') + '"><input type="checkbox" ' + (saved[i] ? 'checked' : '') +
+        return '<label class="check-item' + (saved[t] ? ' done' : '') + '"><input type="checkbox" ' + (saved[t] ? 'checked' : '') +
           ' onchange="togglePrepItem(' + i + ', this)"><span>' + t + '</span></label>';
       }).join('');
     }
@@ -1554,7 +1555,7 @@
       el.closest('.check-item').classList.toggle('done', el.checked);
       let saved = {};
       try { saved = JSON.parse(localStorage.getItem('suhak2026_prepChecklist') || '{}'); } catch (e) {}
-      saved[i] = el.checked;
+      saved[PREP_ITEMS[i]] = el.checked;
       try { localStorage.setItem('suhak2026_prepChecklist', JSON.stringify(saved)); } catch (e) {}
     }
 
