@@ -291,7 +291,6 @@
           <select id="studentNameSelect" class="select-pill">
             <option value="">반을 먼저 선택해주세요</option>
           </select>
-          <div id="studentGroupInfo" style="display:none; margin-top:8px; font-size:0.78rem; font-weight:700; color:var(--primary);"></div>
         </div>
 
         <div class="section-label">지금 상황을 선택하세요</div>
@@ -896,21 +895,17 @@
         filtered.map(s => `<option value="${s.name}" data-num="${s.num}">${s.num}번 ${s.name}</option>`).join('');
     }
 
-    // 학급 선택이 바뀔 때: 이름 목록 갱신 + 소속 조 표시 + 그 조의 코스 순서로 "현재 상태" 드롭다운 재구성
+    // 학급 선택이 바뀔 때: 이름 목록 갱신 + 그 조의 코스 순서로 "현재 상태" 드롭다운 재구성
     function onStudentClassChange() {
       updateStudentNameDropdown();
 
       const cls = document.getElementById('studentClassSelect').value;
-      const groupInfoEl = document.getElementById('studentGroupInfo');
       const evSelect = document.getElementById('studentEventTypeSelect');
       const group = courseConfig.classToGroup[cls];
 
       if (group) {
-        groupInfoEl.style.display = 'block';
-        groupInfoEl.innerText = `👥 소속 조: ${group}`;
         evSelect.innerHTML = buildEventTypeOptionsHtml(courseConfig.groupCourses[group] || []);
       } else {
-        groupInfoEl.style.display = 'none';
         evSelect.innerHTML = buildEventTypeOptionsHtml([]);
       }
 
