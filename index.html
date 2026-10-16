@@ -331,15 +331,6 @@
           </select>
         </div>
 
-        <!-- 우리 팀 전체 일정 (눌러서 코스별 안내문/주의사항 팝업 보기) -->
-        <div class="accordion">
-          <div class="accordion-head" onclick="toggleScheduleList()">
-            <div class="t">📋 우리 팀 일정 보기</div>
-            <span class="chev" id="scheduleToggleIcon">▾</span>
-          </div>
-          <div id="scheduleListBox" style="display:none;" class="accordion-body"></div>
-        </div>
-
         <button class="btn-checkin" onclick="submitCheckin()">이 상태로 체크인 보내기</button>
       </div>
     </div>
@@ -708,44 +699,90 @@
       return cols;
     }
 
+    // ── 시작 속도 개선 ──
+    // 1) 요청 4번(명단·조/코스·코스안내·공지)을 getInitData 1번으로 합침 (서버가 아직 예전 버전이면 자동으로 예전 방식 사용)
+    // 2) 지난번에 받은 명단·코스 정보를 기기에 저장해 두었다가, 다음 접속 때 먼저 화면에 바로 보여주고 뒤에서 새로 갱신
+    const INIT_CACHE_KEY = 'suhak2026_init_v1';
+    const INIT_CACHE_MAX_AGE = 3 * 24 * 60 * 60 * 1000; // 3일
+
+    function readInitCache() {
+      try {
+        const o = JSON.parse(localStorage.getItem(INIT_CACHE_KEY) || 'null');
+        if (o && o.students && o.students.length && o.courseConfig && (Date.now() - o.t) < INIT_CACHE_MAX_AGE) return o;
+      } catch (e) {}
+      return null;
+    }
+
+    function writeInitCache(d) {
+      try {
+        localStorage.setItem(INIT_CACHE_KEY, JSON.stringify({ t: Date.now(), students: d.students, courseConfig: d.courseConfig, courseInfo: d.courseInfo }));
+      } catch (e) {}
+    }
+
+    function fetchInitData() {
+      return callApi('getInitData').then(function(res) {
+        if (res && res.students) return res;
+        throw new Error('NO_INIT');
+      }).catch(function() {
+        // 예전 서버(Code.gs)용 대체 경로: 기존처럼 4번 따로 요청
+        return Promise.all([
+          callApi('getStudentSimpleData'), callApi('getCourseConfig'), callApi('getCourseInfo'), callApi('getClassNotices')
+        ]).then(function(r) {
+          return { students: r[0].students || [], courseConfig: { classToGroup: r[1].classToGroup || {}, groupCourses: r[1].groupCourses || {} },
+                   courseInfo: r[2].items || [], notices: r[3].notices || {} };
+        });
+      });
+    }
+
+    function applyInitData(d) {
+      if (d.students) simpleStudents = d.students;
+      if (d.courseConfig) courseConfig = { classToGroup: d.courseConfig.classToGroup || {}, groupCourses: d.courseConfig.groupCourses || {} };
+      if (d.courseInfo) courseInfoItems = d.courseInfo;
+      if (d.notices) classNotices = d.notices;
+
+      const cls = document.getElementById('studentClassSelect').value;
+      const nameSel = document.getElementById('studentNameSelect');
+      const keepName = nameSel ? nameSel.value : '';
+      if (cls) {
+        updateStudentNameDropdown();           // 이미 반을 골랐다면 이름 목록을 새 명단으로 다시 채움
+        if (keepName) nameSel.value = keepName; // 이미 고른 이름은 유지
+        renderClassNotice(cls);
+      }
+      const teacherSel = document.getElementById('teacherEventTypeSelect');
+      if (teacherSel) teacherSel.innerHTML = buildEventTypeOptionsHtml(getAllCourseNames());
+      renderGroupChips();
+      if (document.getElementById('tab-course').style.display === 'block') renderCourseTab();
+    }
+
     window.onload = function() {
-      const p1 = callApi('getStudentSimpleData').then(function(res) {
-        simpleStudents = res.students || [];
-        // 명단이 아직 안 왔을 때 학생이 반을 먼저 선택해버린 경우를 대비해,
-        // 명단이 도착하면 이미 선택된 반 기준으로 이름 목록을 다시 채워줍니다.
-        const cls = document.getElementById('studentClassSelect').value;
-        if (cls) updateStudentNameDropdown();
+      let lockApplied = false;
+      function applyLockOnce() { if (!lockApplied) { lockApplied = true; applyClassLock(); } }
+
+      // 저장해 둔 이전 데이터가 있으면 즉시 표시
+      const cached = readInitCache();
+      if (cached) { applyInitData(cached); applyLockOnce(); }
+
+      // 서버에서 최신 데이터 받아 갱신 (실패해도 저장된 데이터로 계속 사용 가능)
+      fetchInitData().then(function(d) {
+        applyInitData(d);
+        writeInitCache(d);
+        applyLockOnce();
       }).catch(function(err) {
-        console.error('학생 명단 로드 실패:', err);
+        console.error('초기 데이터 로드 실패:', err);
       });
 
-      const p2 = callApi('getCourseConfig').then(function(res) {
-        courseConfig = { classToGroup: res.classToGroup || {}, groupCourses: res.groupCourses || {} };
-        // 선생님 쪽 구분 드롭다운에도 모든 코스명을 반영
-        const teacherSel = document.getElementById('teacherEventTypeSelect');
-        if (teacherSel) teacherSel.innerHTML = buildEventTypeOptionsHtml(getAllCourseNames());
-        renderGroupChips();
-        if (document.getElementById('tab-course').style.display === 'block') renderCourseTab();
-      }).catch(function(err) {
-        console.error('조/코스 설정 로드 실패:', err);
-      });
-
-      const p3 = loadClassNotices();
-      const p4 = loadCourseInfo();
-
-      // 학생 명단 + 조/코스 설정이 모두 준비된 뒤 URL의 ?class= 값으로 학급 고정 적용
-      Promise.all([p1, p2, p3, p4]).then(applyClassLock);
-
-      // 교사 전용 입구(teacher.html)로 들어온 경우 곧장 인증 절차로 진입 (학생 데이터 로딩과 무관하게 즉시 시도)
+      // 교사 전용 입구(?entry=teacher)로 들어온 경우 곧장 인증 절차로 진입 (학생 데이터 로딩과 무관하게 즉시 시도)
       autoEnterTeacherEntry();
 
-      // 학생 화면에 떠 있는 동안 담임 공지가 새로 올라오면 자동으로 반영되도록 주기적으로 갱신
+      // 학생 화면에 떠 있는 동안 담임 공지가 새로 올라오면 반영 — 60초마다, 화면이 켜져 있을 때만
+      // (학생 수백 명이 짧은 간격으로 계속 요청하면 서버가 느려지므로 간격을 늘렸습니다.)
       setInterval(function() {
+        if (document.hidden) return;
         loadClassNotices().then(function() {
           const cls = document.getElementById('studentClassSelect').value;
           if (cls) renderClassNotice(cls);
         });
-      }, 20000);
+      }, 60000);
     };
 
     // ── 반별 담임 공지글 (학생 화면 전용) ──
