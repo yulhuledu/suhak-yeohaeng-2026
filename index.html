@@ -241,6 +241,7 @@
     <button class="top-nav-btn" id="navBtnRollcall" style="display:none;" onclick="requireTeacherAuth('tab-rollcall')">🛏️ 방배치도</button>
     <button class="top-nav-btn" id="navBtnContacts" style="display:none;" onclick="requireTeacherAuth('tab-contacts')">📞 비상연락망</button>
     <button class="top-nav-btn" id="navBtnNotice" style="display:none;" onclick="requireTeacherAuth('tab-notice')">📢 공지 문구</button>
+    <button class="top-nav-btn" id="navBtnTeacherDoc" style="display:none;" onclick="window.open('https://drive.google.com/file/d/1DM6cGkT0kZQZBPNpEZLB8DlbMjaG7aC7/view?usp=drive_link','_blank','noopener')">📄 인솔교사용 자료</button>
   </div>
 
   <div class="container">
@@ -1214,6 +1215,7 @@
       document.getElementById('navBtnRollcall').style.display = isTeacher ? '' : 'none';
       document.getElementById('navBtnContacts').style.display = isTeacher ? '' : 'none';
       document.getElementById('navBtnNotice').style.display = isTeacher ? '' : 'none';
+      document.getElementById('navBtnTeacherDoc').style.display = isTeacher ? '' : 'none';
     }
 
     function requireTeacherAuth(targetTab) {
