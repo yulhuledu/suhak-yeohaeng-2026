@@ -407,8 +407,11 @@
           <!-- (참고용) 권한 우회 대체 카메라 인풋: 실시간 스캐너가 정상 작동하면 굳이 안 써도 됩니다 -->
           <input type="file" id="nativeQrInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileQrScan(event)">
           <div id="cameraPickRow" style="display:none;margin:8px 0;">
-            <label for="cameraSelect" style="font-size:0.8rem;color:#475569;font-weight:700;">📷 사용할 카메라</label>
-            <select id="cameraSelect" onchange="onCameraChange()" style="width:100%;margin-top:4px;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;background:#fff;"></select>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="cameraSelect" onchange="onCameraChange()" style="flex:1;min-width:0;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.85rem;background:#fff;"></select>
+              <button type="button" id="camFlipBtn" onclick="flipCamera()" style="flex:none;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;">🔄 전면/후면</button>
+            </div>
+            <div id="camStatus" style="display:none;margin-top:6px;font-size:0.8rem;color:#b45309;font-weight:700;"></div>
           </div>
           <div id="reader-container">
             <div id="qr-reader" style="width:100%;"></div>
@@ -1321,95 +1324,138 @@
       }
     }
 
-    let lastGoodCamId = '';
-    function startScanner(deviceId, explicit) {
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("qr-reader");
-      }
-      const config = { fps: 15, qrbox: { width: 220, height: 220 } };
-      let saved = '';
-      try { saved = localStorage.getItem('suhak2026_cam') || ''; } catch (e) {}
-      const want = deviceId || saved;
-      const camArg = want ? want : { facingMode: "environment" };   // 문자열 = 카메라 ID
+    let camBusy = false;
+    let camFacing = 'environment';
 
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        html5QrCode.start(camArg, config, onQrScanSuccess, function(err) {})
-        .then(function() {
-          isScanning = true;
-          if (want) lastGoodCamId = want;
-          populateCameraList(want);
-        }).catch(function(err) {
-          html5QrCode = null;
-          const sel = document.getElementById('cameraSelect');
-          if (sel) sel.disabled = false;
-          if (explicit) {
-            // 선택한 카메라를 못 켠 경우: 이유를 알리고 직전 카메라로 되돌림
-            try { if (lastGoodCamId) localStorage.setItem('suhak2026_cam', lastGoodCamId); else localStorage.removeItem('suhak2026_cam'); } catch (e) {}
-            alert("선택한 카메라를 켜지 못했어요.\n(" + (err && err.message ? err.message : err) + ")\n이전 카메라로 되돌립니다.");
-            setTimeout(function() { startScanner(lastGoodCamId || '', false); }, 400);
-            return;
-          }
-          if (want) {   // 저장해 둔 카메라가 없어졌으면 기본(후면)으로
-            try { localStorage.removeItem('suhak2026_cam'); } catch (e) {}
-            startScanner('', false);
-            return;
-          }
-          resetScannerUI();
-          alert("카메라 시작 실패\n" + err);
+    function setCamStatus(msg) {
+      const el = document.getElementById('camStatus');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.style.display = msg ? 'block' : 'none';
+    }
+    function setCamControls(disabled) {
+      ['cameraSelect', 'camFlipBtn'].forEach(function(id) {
+        const el = document.getElementById(id); if (el) el.disabled = !!disabled;
+      });
+    }
+    // 화면에 남은 카메라 스트림을 강제로 끊습니다 (전환 때 이전 카메라가 안 풀려 화면이 안 나오는 것을 방지)
+    function killVideoTracks() {
+      try {
+        document.querySelectorAll('#qr-reader video').forEach(function(v) {
+          if (v.srcObject && v.srcObject.getTracks) v.srcObject.getTracks().forEach(function(tr) { tr.stop(); });
+          v.srcObject = null;
         });
-      } else {
-        resetScannerUI();
-        alert("이 브라우저는 실시간 카메라(getUserMedia) 자체를 지원하지 않습니다.");
-      }
+      } catch (e) {}
     }
 
-    // 카메라 목록 (권한 허용 후에야 이름이 보입니다)
-    function populateCameraList(currentId) {
-      Html5Qrcode.getCameras().then(function(cams) {
-        const sel = document.getElementById('cameraSelect');
-        const row = document.getElementById('cameraPickRow');
-        if (!cams || cams.length < 2) { row.style.display = 'none'; return; }
-        let activeId = currentId;
-        if (!activeId) {
-          try {
-            const tr = html5QrCode.getRunningTrackSettings && html5QrCode.getRunningTrackSettings();
-            if (tr && tr.deviceId) activeId = tr.deviceId;
-          } catch (e) {}
+    // arg: 카메라 ID(문자열) 또는 {facingMode:...} / explicit: 사용자가 직접 고른 전환인지
+    function startScanner(arg, explicit) {
+      if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+        resetScannerUI();
+        alert("이 브라우저는 실시간 카메라(getUserMedia) 자체를 지원하지 않습니다.");
+        return;
+      }
+      let useArg = arg;
+      let usedSaved = false;
+      if (!useArg) {
+        let saved = '';
+        try { saved = localStorage.getItem('suhak2026_cam') || ''; } catch (e) {}
+        if (saved) { useArg = saved; usedSaved = true; } else { useArg = { facingMode: 'environment' }; }
+      }
+      const inst = new Html5Qrcode("qr-reader");
+      html5QrCode = inst;
+      const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+      const startP = inst.start(useArg, config, onQrScanSuccess, function() {});
+      const timeoutP = new Promise(function(_, rej) {
+        setTimeout(function() { rej(new Error('카메라가 응답하지 않아요')); }, 7000);
+      });
+      Promise.race([startP, timeoutP]).then(function() {
+        isScanning = true;
+        camBusy = false;
+        setCamControls(false);
+        setCamStatus('');
+        if (typeof useArg === 'string') { try { localStorage.setItem('suhak2026_cam', useArg); } catch (e) {} }
+        if (useArg && useArg.facingMode) camFacing = useArg.facingMode;
+        populateCameraList();
+      }).catch(function(err) {
+        // 늦게라도 켜졌을 수 있는 스트림 정리
+        try { inst.stop().catch(function() {}); } catch (e) {}
+        killVideoTracks();
+        html5QrCode = null;
+        isScanning = false;
+        const msg = (err && err.message) ? err.message : String(err);
+        if (explicit || usedSaved) {
+          try { localStorage.removeItem('suhak2026_cam'); } catch (e) {}
+          setCamStatus('선택한 카메라를 켜지 못했어요 (' + msg + '). 기본 카메라로 다시 켭니다…');
+          setTimeout(function() { startScanner({ facingMode: 'environment' }, false); }, 900);
+          return;
         }
+        camBusy = false;
+        setCamControls(false);
+        resetScannerUI();
+        alert("카메라 시작 실패\n" + msg);
+      });
+    }
+
+    // 카메라 목록: 이미 켜진 스트림이 있는 상태에서 getUserMedia를 또 부르지 않고 enumerateDevices만 사용
+    function populateCameraList() {
+      const row = document.getElementById('cameraPickRow');
+      const sel = document.getElementById('cameraSelect');
+      row.style.display = 'block';
+      if (!(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices)) { sel.style.display = 'none'; return; }
+      navigator.mediaDevices.enumerateDevices().then(function(ds) {
+        const cams = ds.filter(function(d) { return d.kind === 'videoinput'; });
+        let activeId = '';
+        try {
+          const st = html5QrCode && html5QrCode.getRunningTrackSettings && html5QrCode.getRunningTrackSettings();
+          if (st && st.deviceId) activeId = st.deviceId;
+        } catch (e) {}
+        if (cams.length < 2) { sel.style.display = 'none'; return; }
+        sel.style.display = '';
         sel.innerHTML = '';
         cams.forEach(function(c, idx) {
           const o = document.createElement('option');
-          o.value = c.id;
+          o.value = c.deviceId;
           o.textContent = c.label || ('카메라 ' + (idx + 1));
-          if (c.id === activeId) o.selected = true;
+          if (c.deviceId && c.deviceId === activeId) o.selected = true;
           sel.appendChild(o);
         });
-        sel.disabled = false;
-        row.style.display = 'block';
-      }).catch(function() {});
+      }).catch(function() { sel.style.display = 'none'; });
+    }
+
+    // 현재 카메라를 끄고 새 카메라로 다시 시작
+    function switchCamera(arg) {
+      if (camBusy) return;
+      camBusy = true;
+      setCamControls(true);
+      setCamStatus('카메라 전환 중…');
+      const old = html5QrCode;
+      const proceed = function() {
+        killVideoTracks();
+        try { if (old) old.clear(); } catch (e) {}
+        html5QrCode = null;
+        isScanning = false;
+        setTimeout(function() { startScanner(arg, true); }, 800);   // 이전 카메라가 풀릴 시간
+      };
+      killVideoTracks();
+      if (old && isScanning) { old.stop().then(proceed).catch(proceed); } else { proceed(); }
     }
 
     function onCameraChange() {
-      const sel = document.getElementById('cameraSelect');
-      const id = sel.value;
-      if (!id) return;
-      try { localStorage.setItem('suhak2026_cam', id); } catch (e) {}
-      sel.disabled = true;   // 전환 중 중복 선택 방지
-      const restart = function() {
-        try { if (html5QrCode) html5QrCode.clear(); } catch (e) {}
-        html5QrCode = null;          // 새 인스턴스로 깨끗이 다시 시작
-        isScanning = false;
-        // 기존 카메라가 완전히 해제될 시간을 잠깐 줍니다 (일부 휴대폰에서 필요)
-        setTimeout(function() { startScanner(id, true); }, 600);
-      };
-      if (html5QrCode && isScanning) {
-        html5QrCode.stop().then(restart).catch(restart);
-      } else { restart(); }
+      const id = document.getElementById('cameraSelect').value;
+      if (id) switchCamera(id);
+    }
+
+    function flipCamera() {
+      camFacing = (camFacing === 'environment') ? 'user' : 'environment';
+      try { localStorage.removeItem('suhak2026_cam'); } catch (e) {}
+      switchCamera({ facingMode: camFacing });
     }
 
     function resetScannerUI() {
       document.getElementById('reader-container').style.display = 'none';
       document.getElementById('cameraPickRow').style.display = 'none';
+      camBusy = false; setCamStatus('');
       const btn = document.getElementById('btnToggleScan');
       btn.innerText = '📹 실시간 비디오 스캐너';
       btn.classList.remove('stop');
