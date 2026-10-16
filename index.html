@@ -406,6 +406,10 @@
           </div>
           <!-- (참고용) 권한 우회 대체 카메라 인풋: 실시간 스캐너가 정상 작동하면 굳이 안 써도 됩니다 -->
           <input type="file" id="nativeQrInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileQrScan(event)">
+          <div id="cameraPickRow" style="display:none;margin:8px 0;">
+            <label for="cameraSelect" style="font-size:0.8rem;color:#475569;font-weight:700;">📷 사용할 카메라</label>
+            <select id="cameraSelect" onchange="onCameraChange()" style="width:100%;margin-top:4px;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;background:#fff;"></select>
+          </div>
           <div id="reader-container">
             <div id="qr-reader" style="width:100%;"></div>
           </div>
@@ -1317,21 +1321,28 @@
       }
     }
 
-    function startScanner() {
+    function startScanner(deviceId) {
       if (!html5QrCode) {
         html5QrCode = new Html5Qrcode("qr-reader");
       }
       const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+      let saved = '';
+      try { saved = localStorage.getItem('suhak2026_cam') || ''; } catch (e) {}
+      const want = deviceId || saved;
+      const camArg = want ? { deviceId: { exact: want } } : { facingMode: "environment" };
 
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        html5QrCode.start(
-          { facingMode: "environment" },
-          config,
-          onQrScanSuccess,
-          function(err) {}
-        ).then(function() {
+        html5QrCode.start(camArg, config, onQrScanSuccess, function(err) {})
+        .then(function() {
           isScanning = true;
+          populateCameraList(want);
         }).catch(function(err) {
+          // 저장해 둔 카메라가 없어졌으면 기본(후면)으로 재시도
+          if (want) {
+            try { localStorage.removeItem('suhak2026_cam'); } catch (e) {}
+            startScanner('');
+            return;
+          }
           resetScannerUI();
           alert("카메라 시작 실패\n" + err);
         });
@@ -1341,8 +1352,44 @@
       }
     }
 
+    // 카메라 목록 (권한 허용 후에야 이름이 보입니다)
+    function populateCameraList(currentId) {
+      Html5Qrcode.getCameras().then(function(cams) {
+        const sel = document.getElementById('cameraSelect');
+        const row = document.getElementById('cameraPickRow');
+        if (!cams || cams.length < 2) { row.style.display = 'none'; return; }
+        let activeId = currentId;
+        if (!activeId) {
+          try {
+            const tr = html5QrCode.getRunningTrackSettings && html5QrCode.getRunningTrackSettings();
+            if (tr && tr.deviceId) activeId = tr.deviceId;
+          } catch (e) {}
+        }
+        sel.innerHTML = '';
+        cams.forEach(function(c, idx) {
+          const o = document.createElement('option');
+          o.value = c.id;
+          o.textContent = c.label || ('카메라 ' + (idx + 1));
+          if (c.id === activeId) o.selected = true;
+          sel.appendChild(o);
+        });
+        row.style.display = 'block';
+      }).catch(function() {});
+    }
+
+    function onCameraChange() {
+      const id = document.getElementById('cameraSelect').value;
+      if (!id) return;
+      try { localStorage.setItem('suhak2026_cam', id); } catch (e) {}
+      const switchTo = function() { isScanning = false; startScanner(id); };
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(switchTo).catch(switchTo);
+      } else { switchTo(); }
+    }
+
     function resetScannerUI() {
       document.getElementById('reader-container').style.display = 'none';
+      document.getElementById('cameraPickRow').style.display = 'none';
       const btn = document.getElementById('btnToggleScan');
       btn.innerText = '📹 실시간 비디오 스캐너';
       btn.classList.remove('stop');
