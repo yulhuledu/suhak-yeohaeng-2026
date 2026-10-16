@@ -1321,7 +1321,8 @@
       }
     }
 
-    function startScanner(deviceId) {
+    let lastGoodCamId = '';
+    function startScanner(deviceId, explicit) {
       if (!html5QrCode) {
         html5QrCode = new Html5Qrcode("qr-reader");
       }
@@ -1329,18 +1330,28 @@
       let saved = '';
       try { saved = localStorage.getItem('suhak2026_cam') || ''; } catch (e) {}
       const want = deviceId || saved;
-      const camArg = want ? { deviceId: { exact: want } } : { facingMode: "environment" };
+      const camArg = want ? want : { facingMode: "environment" };   // 문자열 = 카메라 ID
 
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         html5QrCode.start(camArg, config, onQrScanSuccess, function(err) {})
         .then(function() {
           isScanning = true;
+          if (want) lastGoodCamId = want;
           populateCameraList(want);
         }).catch(function(err) {
-          // 저장해 둔 카메라가 없어졌으면 기본(후면)으로 재시도
-          if (want) {
+          html5QrCode = null;
+          const sel = document.getElementById('cameraSelect');
+          if (sel) sel.disabled = false;
+          if (explicit) {
+            // 선택한 카메라를 못 켠 경우: 이유를 알리고 직전 카메라로 되돌림
+            try { if (lastGoodCamId) localStorage.setItem('suhak2026_cam', lastGoodCamId); else localStorage.removeItem('suhak2026_cam'); } catch (e) {}
+            alert("선택한 카메라를 켜지 못했어요.\n(" + (err && err.message ? err.message : err) + ")\n이전 카메라로 되돌립니다.");
+            setTimeout(function() { startScanner(lastGoodCamId || '', false); }, 400);
+            return;
+          }
+          if (want) {   // 저장해 둔 카메라가 없어졌으면 기본(후면)으로
             try { localStorage.removeItem('suhak2026_cam'); } catch (e) {}
-            startScanner('');
+            startScanner('', false);
             return;
           }
           resetScannerUI();
@@ -1373,18 +1384,27 @@
           if (c.id === activeId) o.selected = true;
           sel.appendChild(o);
         });
+        sel.disabled = false;
         row.style.display = 'block';
       }).catch(function() {});
     }
 
     function onCameraChange() {
-      const id = document.getElementById('cameraSelect').value;
+      const sel = document.getElementById('cameraSelect');
+      const id = sel.value;
       if (!id) return;
       try { localStorage.setItem('suhak2026_cam', id); } catch (e) {}
-      const switchTo = function() { isScanning = false; startScanner(id); };
+      sel.disabled = true;   // 전환 중 중복 선택 방지
+      const restart = function() {
+        try { if (html5QrCode) html5QrCode.clear(); } catch (e) {}
+        html5QrCode = null;          // 새 인스턴스로 깨끗이 다시 시작
+        isScanning = false;
+        // 기존 카메라가 완전히 해제될 시간을 잠깐 줍니다 (일부 휴대폰에서 필요)
+        setTimeout(function() { startScanner(id, true); }, 600);
+      };
       if (html5QrCode && isScanning) {
-        html5QrCode.stop().then(switchTo).catch(switchTo);
-      } else { switchTo(); }
+        html5QrCode.stop().then(restart).catch(restart);
+      } else { restart(); }
     }
 
     function resetScannerUI() {
