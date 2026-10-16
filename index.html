@@ -1859,7 +1859,10 @@
 
       function buildGroup(obj, isFemale) {
         let h = '';
-        for (const [room, stList] of Object.entries(obj)) {
+        // 호실 번호가 빠른 순서(201호 → 202호 …)로 정렬, '미배정'은 맨 아래
+        const roomNo = function(r) { const n = parseInt(String(r).replace(/[^0-9]/g, ''), 10); return isNaN(n) ? Infinity : n; };
+        const sortedRooms = Object.entries(obj).sort(function(x, y) { return roomNo(x[0]) - roomNo(y[0]); });
+        for (const [room, stList] of sortedRooms) {
           const rDone = stList.filter(s => s.checkedRollcall).length;
           h += `
             <div class="room-card">
