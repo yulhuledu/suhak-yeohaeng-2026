@@ -26,6 +26,7 @@
     header { background: #2251a3; color: #fff; text-align: center; padding: 16px 90px; position: relative; }
     header h1 { font-size: 1.1rem; font-weight: 800; line-height: 1.35; word-break: keep-all; }
     header p { font-size: 0.8rem; opacity: 0.85; margin-top: 3px; }
+    .header-doc-link { display: inline-block; margin-top: 9px; padding: 6px 16px; border-radius: 999px; background: #fff; color: #2251a3; font-size: 0.82rem; font-weight: 800; text-decoration: none; }
     .pin-badge { position: absolute; right: 10px; top: 14px; max-width: 78px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 14px; font-size: 0.62rem; line-height: 1.3; padding: 5px 6px; cursor: pointer; color: #fff; text-align: center; white-space: normal; word-break: keep-all; }
 
     .top-nav { display: flex; gap: 6px; padding: 10px 12px; max-width: 600px; margin: 0 auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -232,6 +233,7 @@
     <h1>🚌 2026 수학여행 인솔 지원 시스템</h1>
     <p>청북고등학교 실시간 안전 관리</p>
     <div class="pin-badge" id="lockStatusBadge" onclick="handleLockClick()">🔒 교사 로그인</div>
+    <a id="headerTeacherDoc" class="header-doc-link" style="display:none;" href="https://drive.google.com/file/d/1DM6cGkT0kZQZBPNpEZLB8DlbMjaG7aC7/view?usp=drive_link" target="_blank" rel="noopener">📄 인솔교사용 자료</a>
   </header>
 
   <div class="top-nav">
@@ -241,7 +243,6 @@
     <button class="top-nav-btn" id="navBtnRollcall" style="display:none;" onclick="requireTeacherAuth('tab-rollcall')">🛏️ 방배치도</button>
     <button class="top-nav-btn" id="navBtnContacts" style="display:none;" onclick="requireTeacherAuth('tab-contacts')">📞 비상연락망</button>
     <button class="top-nav-btn" id="navBtnNotice" style="display:none;" onclick="requireTeacherAuth('tab-notice')">📢 공지 문구</button>
-    <button class="top-nav-btn" id="navBtnTeacherDoc" style="display:none;" onclick="window.open('https://drive.google.com/file/d/1DM6cGkT0kZQZBPNpEZLB8DlbMjaG7aC7/view?usp=drive_link','_blank','noopener')">📄 인솔교사용 자료</button>
   </div>
 
   <div class="container">
@@ -1215,7 +1216,7 @@
       document.getElementById('navBtnRollcall').style.display = isTeacher ? '' : 'none';
       document.getElementById('navBtnContacts').style.display = isTeacher ? '' : 'none';
       document.getElementById('navBtnNotice').style.display = isTeacher ? '' : 'none';
-      document.getElementById('navBtnTeacherDoc').style.display = isTeacher ? '' : 'none';
+      document.getElementById('headerTeacherDoc').style.display = isTeacher ? 'inline-block' : 'none';
     }
 
     function requireTeacherAuth(targetTab) {
