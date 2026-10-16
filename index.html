@@ -372,8 +372,15 @@
         <div class="progress-track"><div class="progress-fill" id="assemblyProgressFill"></div></div>
       </div>
 
-      <div class="control-panel">
-        <select class="control-select" id="teacherEventTypeSelect" onchange="syncAssemblyStatus()">
+      <div class="control-panel" style="display:block;">
+        <div class="ev-card" id="tevCard" style="margin-bottom:0;">
+          <div class="ev-card-label">확인할 일정</div>
+          <div class="ev-card-main" id="tevCardMain">🚌 버스 탑승</div>
+          <div class="ev-card-sub" id="tevCardSub"></div>
+          <button type="button" class="ev-change" id="tevChangeBtn" onclick="toggleTeacherEventPick()">다른 일정 선택하기 ▾</button>
+        </div>
+        <div class="ev-list" id="tevList" style="display:none; margin:10px 0 0;"></div>
+        <select class="control-select" id="teacherEventTypeSelect" style="display:none;" onchange="syncAssemblyStatus()">
           <option value="🚌 버스 탑승">🚌 버스 탑승</option>
           <option value="📍 장소/체험지 집결">📍 장소/체험지 집결</option>
           <option value="🍽️ 식당 도착">🍽️ 식당 도착</option>
@@ -770,8 +777,9 @@
         refreshStudentEvents();
       }
       const teacherSel = document.getElementById('teacherEventTypeSelect');
-      if (teacherSel) teacherSel.innerHTML = buildEventTypeOptionsHtml(getAllCourseNames());
+      if (teacherSel) { const keep = teacherSel.value; teacherSel.innerHTML = buildEventTypeOptionsHtml(getAllCourseNames()); teacherSel.value = keep; }
       renderGroupChips();
+      refreshTeacherEvents(!applyInitData.teacherInit); applyInitData.teacherInit = true;
       if (document.getElementById('tab-course').style.display === 'block') renderCourseTab();
     }
 
@@ -1052,9 +1060,94 @@
       container.innerHTML = html;
     }
 
+    // ── 선생님 모니터링: 학생 화면과 같은 방식의 "확인할 일정" 카드 + 오늘 일정 목록 ──
+    let tevShowOtherDays = false;
+
+    function getTeacherCourseList() {
+      let g = null;
+      if (currentGroupFilter && currentGroupFilter !== '전체') g = currentGroupFilter;
+      else if (currentClass && currentClass !== '전체') g = (courseConfig.classToGroup || {})[currentClass] || null;
+      return g ? ((courseConfig.groupCourses || {})[g] || []) : getAllCourseNames();
+    }
+
+    function teacherVisibleCourses() {
+      const list = getTeacherCourseList(), today = todayTripDay() + '일차';
+      return list.filter(function(n) { return tevShowOtherDays || !evDay(n) || evDay(n) === today; });
+    }
+
+    function refreshTeacherEvents(forceFirst) {
+      const sel = document.getElementById('teacherEventTypeSelect');
+      if (!sel) return;
+      const vis = teacherVisibleCourses();
+      const cur = sel.value;
+      const isDefault = DEFAULT_EVENT_TYPES.indexOf(cur) !== -1;
+      const inList = vis.indexOf(cur) !== -1;
+      // 현재 보고 있는 일정이 이 조/오늘 목록에 없으면(또는 처음이면) 오늘 첫 일정으로
+      if (vis.length && ((!inList && !isDefault) || forceFirst)) {
+        sel.value = vis[0];
+        syncAssemblyStatus();
+      }
+      buildTeacherEventList();
+      renderTeacherEventCard();
+    }
+
+    function buildTeacherEventList() {
+      const box = document.getElementById('tevList');
+      if (!box) return;
+      const all = getTeacherCourseList(), vis = teacherVisibleCourses();
+      const cur = document.getElementById('teacherEventTypeSelect').value;
+      const oneTeam = (currentGroupFilter && currentGroupFilter !== '전체') || (currentClass && currentClass !== '전체');
+      box.innerHTML = '';
+      function addRow(name, text) {
+        const b = document.createElement('button'); b.type = 'button';
+        b.className = 'ev-row' + (name === cur ? ' selected' : ''); b.textContent = text;
+        b.onclick = function() { chooseTeacherEvent(name); }; box.appendChild(b);
+      }
+      function addHead(t) { const d = document.createElement('div'); d.className = 'ev-day'; d.textContent = t; box.appendChild(d); }
+      let lastDay = '';
+      vis.forEach(function(name) {
+        const day = evDay(name);
+        if (day && day !== lastDay) { addHead(day); lastDay = day; }
+        addRow(name, (oneTeam ? (all.indexOf(name) + 1) + '. ' : '') + evLabel(name));
+      });
+      addHead('기타');
+      DEFAULT_EVENT_TYPES.forEach(function(n) { addRow(n, n); });
+      const more = document.createElement('button'); more.type = 'button'; more.className = 'ev-more';
+      more.textContent = tevShowOtherDays ? '오늘 일정만 보기' : '다른 날 일정도 보기';
+      more.onclick = function() { tevShowOtherDays = !tevShowOtherDays; buildTeacherEventList(); };
+      box.appendChild(more);
+    }
+
+    function renderTeacherEventCard() {
+      const v = document.getElementById('teacherEventTypeSelect').value;
+      const list = getTeacherCourseList(), idx = list.indexOf(v);
+      const oneTeam = (currentGroupFilter && currentGroupFilter !== '전체') || (currentClass && currentClass !== '전체');
+      const t = document.getElementById('currentStatusTitle'); if (t) t.innerText = v + ' 현황';
+      const rl = document.getElementById('resetEventTypeLabel'); if (rl) rl.innerText = v;
+      document.getElementById('tevCardMain').textContent = idx >= 0 ? evLabel(v) : v;
+      document.getElementById('tevCardSub').textContent = idx >= 0 ? (evDay(v) + (oneTeam ? ' · ' + (idx + 1) + '/' + list.length + '번째 일정' : '')) : '';
+    }
+
+    function toggleTeacherEventPick() {
+      const box = document.getElementById('tevList');
+      const open = box.style.display === 'none';
+      box.style.display = open ? 'block' : 'none';
+      document.getElementById('tevChangeBtn').textContent = open ? '닫기 ▴' : '다른 일정 선택하기 ▾';
+    }
+
+    function chooseTeacherEvent(name) {
+      document.getElementById('teacherEventTypeSelect').value = name;
+      syncAssemblyStatus();
+      buildTeacherEventList();
+      renderTeacherEventCard();
+      document.getElementById('tevList').style.display = 'none';
+      document.getElementById('tevChangeBtn').textContent = '다른 일정 선택하기 ▾';
+    }
+
     function filterGroup(g) {
       currentGroupFilter = g;
       renderGroupChips();
+      refreshTeacherEvents();
       if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
     }
 
@@ -1618,6 +1711,7 @@
       if (tabKey === 'tab-assembly-teacher') {
         document.getElementById('navBtnAssembly').classList.add('active');
         document.getElementById('view-teacher-monitoring').style.display = 'block';
+        refreshTeacherEvents();
         renderAssemblyTeacher();
         startAssemblyPolling();
       } else if (tabKey === 'tab-rollcall') {
@@ -1881,6 +1975,7 @@
     function filterClass(cls) {
       currentClass = cls;
       courseTabClass = '';
+      refreshTeacherEvents();
       document.querySelectorAll('#globalClassChips .chip').forEach(c => c.classList.toggle('active', c.innerText === cls));
 
       if (currentTab === 'tab-assembly-teacher') renderAssemblyTeacher();
