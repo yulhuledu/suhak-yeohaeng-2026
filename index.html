@@ -218,6 +218,11 @@
     .check-item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 11px; background: #f1f5f9; border-radius: 10px; margin-bottom: 6px; font-size: 0.85rem; cursor: pointer; }
     .check-item input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
     .check-item.done span { color: var(--gray); text-decoration: line-through; }
+    /* 여행 준비 탭: 제목 크기·색 통일, 설명 글씨는 진하게 */
+    #tab-prep .info-card h2, #tab-prep .info-card h3 { font-size: 0.95rem; font-weight: 800; color: var(--primary); margin: 0 0 8px; }
+    #tab-prep #prepChecklist h3 { margin: 16px 0 6px; }
+    #tab-prep .info-card p, #tab-prep .info-card p.muted { font-size: 0.85rem; line-height: 1.6; color: #334155; }
+    #tab-prep .rule-line .k { color: #475569; }
     .course-day { font-weight: 800; font-size: 0.78rem; color: var(--primary); margin: 12px 0 5px; }
     .course-row { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; }
 
@@ -466,6 +471,11 @@
       <div class="info-card">
         <h2>✈️ 항공편 수화물 안내</h2>
         <p class="muted">제주항공 국내선 공식 안내와 공항 제한물품 기준으로 정리했어요. 궁금한 점은 인솔 선생님께 먼저 물어보세요. (제주항공 고객센터 1599-1500)</p>
+        <div style="margin-top:12px;padding:14px;border:2px solid #2563eb;border-radius:12px;background:#eff6ff;">
+          <h3 style="color:#1e40af;margin-bottom:4px;">🔎 반입금지 물품 사전확인!</h3>
+          <p style="margin:0 0 10px;">"물어보안"이나 <b>항공보안 365</b>에서 내 짐이 반입 가능한지 미리 찾아보세요. 자세한 내용은 직접 검색해서 확인해 보는 거예요.</p>
+          <a href="https://www.avsec365.or.kr" target="_blank" rel="noopener" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#2563eb;color:#fff;font-size:0.9rem;font-weight:800;text-decoration:none;">항공보안 365 바로가기 (www.avsec365.or.kr)</a>
+        </div>
       </div>
       <div class="info-card">
         <h3>🪪 탑승 신분증 (가는 날·오는 날 모두 필요)</h3>
@@ -500,11 +510,6 @@
         </div>
         <p class="muted" style="margin-top:10px;">주류, 라이터, 전자담배는 학생 신분에 맞지 않아 아예 가져오지 않아요. 공항 보안검색에서 발견되면 인솔교사에게 전달되고, 학교생활규정에 따라 조치될 수 있어요.</p>
       </div>
-      <div class="info-card" style="border:2px solid #2563eb;">
-        <h3>🔎 반입금지 물품 사전확인!</h3>
-        <p class="muted" style="margin:4px 0 8px;">"물어보안"이나 <b>항공보안 365</b>에서 내 짐이 반입 가능한지 미리 찾아보세요. 자세한 내용은 직접 검색해서 확인해 보는 거예요.</p>
-        <a href="https://www.avsec365.or.kr" target="_blank" rel="noopener" style="display:block;text-align:center;padding:11px;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;text-decoration:none;">항공보안 365 바로가기 (www.avsec365.or.kr)</a>
-      </div>
       <div class="info-card">
         <h3>🎒 위탁수하물(캐리어)에 넣어요</h3>
         <div class="pill-row">
@@ -515,9 +520,9 @@
       <div class="info-card">
         <h2>📋 준비물 체크리스트</h2>
         <p class="muted">캐리어 지퍼를 닫기 전, 빠뜨린 물건이 없는지 확인해 보세요!</p>
-        <div class="rule-line"><span class="k">호텔 제공</span><span class="v">샴푸·린스·바디워시·비누, 큰 수건 1장·작은 수건 1장(1일 기준). 따로 챙기지 않아도 돼요. 개인적으로 필요하면 추가로 준비하세요.</span></div>
+        <p style="background:#f1f5f9;border-radius:10px;padding:10px 12px;margin:8px 0 0;"><b>🏨 호텔 제공 물품</b><br>샴푸·린스·바디워시·비누, 큰 수건 1장·작은 수건 1장(1일 기준). 따로 챙기지 않아도 돼요. 개인적으로 필요하면 추가로 준비하세요.</p>
         <div id="prepChecklist"></div>
-        <p class="muted" style="margin-top:12px; font-weight:700; color:#b91c1c;">🚨 공항에서는 항공기 탑승 전 모든 휴대 수하물과 위탁수하물을 X-ray로 보안검색해요. 반입 금지 물품이 발견되면 인솔교사에게 전달되고, 학교에서 금지한 물품을 소지한 학생은 학교생활규정에 따라 조치될 수 있어요. 출발 전 가방을 꼭 확인하세요!</p>
+        <p class="muted" style="margin-top:14px; font-weight:700; color:#b91c1c;">🚨 공항에서는 항공기 탑승 전 모든 휴대 수하물과 위탁수하물을 X-ray로 보안검색해요. 반입 금지 물품이 발견되면 인솔교사에게 전달되고, 학교에서 금지한 물품을 소지한 학생은 학교생활규정에 따라 조치될 수 있어요. 출발 전 가방을 꼭 확인하세요!</p>
         <p class="muted" style="margin-top:6px; font-weight:700;">준비는 꼼꼼하게, 짐은 가볍게! 10월 26일(월) 오전 8시, 학교 운동장에서 만나요!</p>
         <p class="muted" style="margin-top:8px;">체크는 이 기기에만 저장돼요. 다른 학생·다른 기기와는 공유되지 않아요.</p>
       </div>
@@ -2042,8 +2047,8 @@
       try { saved = JSON.parse(localStorage.getItem('suhak2026_prepChecklist') || '{}'); } catch (e) {}
       const box = document.getElementById('prepChecklist');
       box.innerHTML = PREP_GROUPS.map(function(grp, gi) {
-        let h = '<h3 style="margin:14px 0 4px;' + (grp.danger ? 'color:#b91c1c;' : '') + '">' + grp.title + '</h3>';
-        if (grp.note) h += '<p class="muted" style="margin:2px 0 6px;font-size:0.8rem;">' + grp.note + '</p>';
+        let h = '<h3' + (grp.danger ? ' style="color:#b91c1c;"' : '') + '>' + grp.title + '</h3>';
+        if (grp.note) h += '<p class="muted" style="margin:0 0 8px;">' + grp.note + '</p>';
         h += grp.items.map(function(t, ii) {
           const k = prepKey(gi, t);
           return '<label class="check-item' + (saved[k] ? ' done' : '') + '"><input type="checkbox" ' + (saved[k] ? 'checked' : '') +
