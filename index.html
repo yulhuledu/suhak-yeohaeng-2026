@@ -249,13 +249,27 @@
     .seat-sheet .ok{background:var(--primary);color:#fff}
     .seat-sheet .undo{background:#fef3c7;color:#92400e}
     .seat-sheet .close{background:#f1f5f9;color:#334155}
+    /* 스캔 도우미 모드 */
+    .scan-event-box { background:#fff; border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:10px; }
+    .scan-event-box label { display:block; font-size:0.8rem; font-weight:800; color:var(--primary); margin-bottom:6px; }
+    .scan-event-box select { width:100%; padding:11px; border:2px solid var(--border); border-radius:10px; font-size:0.92rem; font-weight:700; background:#fff; }
+    .scan-result { border-radius:14px; padding:18px 12px; text-align:center; margin-bottom:10px; transition:background .12s; }
+    .scan-result .big { font-size:1.5rem; font-weight:900; }
+    .scan-result .small { font-size:0.85rem; margin-top:4px; font-weight:700; }
+    .scan-result.idle { background:#f1f5f9; color:#475569; }
+    .scan-result.ok { background:#22c55e; color:#fff; }
+    .scan-result.dup { background:#f59e0b; color:#fff; }
+    .scan-result.err { background:#ef4444; color:#fff; }
+    .scan-count { text-align:center; font-size:0.85rem; color:#334155; margin-bottom:10px; }
+    .btn-exit-scan { width:100%; margin-top:14px; padding:11px; border:1px solid var(--border); background:#fff; border-radius:10px; font-weight:800; color:#64748b; cursor:pointer; }
   </style>
 </head>
 <body>
   <script>
     // 교사 전용 입구(teacher.html -> ?entry=teacher)로 들어온 경우, 학생 체크인 화면이
     // 잠깐 보였다 사라지는 깜빡임 없이 바로 감추기 위한 스크립트입니다 (실제 로직은 아래 메인 스크립트에서 처리).
-    if (new URLSearchParams(location.search).get('entry') === 'teacher') {
+    var __entry = new URLSearchParams(location.search).get('entry');
+    if (__entry === 'teacher' || __entry === 'scan') {
       document.write('<style>#view-student-checkin{display:none !important;}</style>');
     }
   </script>
@@ -359,6 +373,25 @@
     </div>
 
     <!-- 1-B. 선생님 모니터링 -->
+    <!-- 스캔 도우미 모드 (스캔 전용 PIN으로만 열림) -->
+    <div id="view-scan-only" style="display:none;">
+      <div class="info-card">
+        <h2>📷 스캔 도우미</h2>
+        <p class="muted">확인할 일정을 고른 뒤, 친구들의 QR을 차례로 찍어 주세요. 체크되면 <b>"삑!"</b> 소리가 나요. <b>삑삑</b>은 이미 체크된 학생, 낮은 <b>"부-"</b> 소리는 실패(다시 찍기)예요.</p>
+      </div>
+      <div class="scan-event-box">
+        <label for="scanEventSelect">지금 확인하는 일정</label>
+        <select id="scanEventSelect" onchange="onScanEventChange()"></select>
+      </div>
+      <div id="scanResult" class="scan-result idle">
+        <div class="big" id="scanResultBig">대기 중</div>
+        <div class="small" id="scanResultSmall">QR을 카메라에 비춰 주세요</div>
+      </div>
+      <div class="scan-count">이 일정에서 이 기기로 체크한 학생 <b id="scanCountNum">0</b>명</div>
+      <div id="scanHost"></div>
+      <button type="button" class="btn-exit-scan" onclick="exitScanMode()">도우미 모드 끝내기</button>
+    </div>
+
     <div id="view-teacher-monitoring" style="display:none;">
       <div class="sub-nav">
         <button class="sub-nav-btn active">선생님 모니터링</button>
@@ -599,7 +632,7 @@
   <!-- 교사 PIN 모달 -->
   <div class="modal-overlay" id="pinModal">
     <div class="modal-content" style="text-align:center;">
-      <h3 style="font-size:1.15rem; font-weight:800; margin-bottom:8px;">🔒 교사 인증</h3>
+      <h3 style="font-size:1.15rem; font-weight:800; margin-bottom:8px;">🔒 교사 · 스캔 도우미 인증</h3>
       <p style="font-size:0.85rem; color:var(--gray); margin-bottom:16px;">학생 정보 보호를 위해 PIN 번호를 입력하세요.</p>
       <input type="password" id="pinInput" maxlength="6" placeholder="PIN 4자리" style="width:70%; font-size:1.4rem; letter-spacing:6px; text-align:center; padding:10px; border:2px solid var(--border); border-radius:10px; outline:none; margin-bottom:16px;">
       <div style="display:flex; gap:8px;">
@@ -672,6 +705,7 @@
     }
 
     let isTeacher = false;
+    let isScanOnly = false;
     let simpleStudents = [];
     let fullStudents = [];
     let currentClass = '1반';
@@ -707,21 +741,34 @@
     let lastScannedData = '';
     let lastScanTime = 0;
 
-    // Web Audio 비프음(삑!) 생성 함수
-    function playBeep() {
+    // Web Audio 알림음: 소리만 듣고 결과를 바로 알 수 있게 3종류로 구분합니다.
+    //  · 체크 성공: 높은 "삑!" 1번   · 이미 체크됨: "삑삑" 2번(중간 음)   · 실패/없는 학생: 낮고 긴 "부-"
+    let sharedAudioCtx = null;
+    function getAudioCtx() {
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.12);
-      } catch(e) {}
+        if (!sharedAudioCtx) sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+      } catch (e) { sharedAudioCtx = null; }
+      return sharedAudioCtx;
     }
+    function unlockAudio() { getAudioCtx(); }   // 버튼을 누르는 순간(사용자 동작)에 한 번 깨워 두기
+    function tone(freq, startSec, durSec, type, vol) {
+      const ctx = getAudioCtx(); if (!ctx) return;
+      try {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + startSec);
+        gain.gain.setValueAtTime(vol || 0.35, ctx.currentTime + startSec);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startSec + durSec);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + startSec);
+        osc.stop(ctx.currentTime + startSec + durSec + 0.02);
+      } catch (e) {}
+    }
+    function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+    function playBeep() { tone(1320, 0, 0.11, 'sine', 0.4); vibrate(50); }                       // 성공: 삑!
+    function playDup() { tone(660, 0, 0.09, 'square', 0.22); tone(660, 0.16, 0.09, 'square', 0.22); vibrate([60, 60, 60]); }   // 이미 체크: 삑삑
+    function playErr() { tone(200, 0, 0.45, 'sawtooth', 0.3); vibrate(300); }                    // 실패: 부-
 
     // B동(여학생) / A동(남학생) 층별 평면도 — 층(floor)만 바꿔서 자동 생성
     //  · A동: 가운데 엘리베이터(E/V), 좌측 21~30호, 우측 01~11호 (각 층 공통). E/V에 가까운 쪽이 낮은 번호(01, 21)
@@ -801,6 +848,7 @@
       renderGroupChips();
       refreshTeacherEvents(!applyInitData.teacherInit); applyInitData.teacherInit = true;
       if (document.getElementById('tab-course').style.display === 'block') renderCourseTab();
+      if (isScanOnly) buildScanEventOptions(true);   // 스캔 도우미 화면: 선택한 일정은 유지한 채 목록만 갱신
     }
 
     window.onload = function() {
@@ -822,6 +870,7 @@
 
       // 교사 전용 입구(?entry=teacher)로 들어온 경우 곧장 인증 절차로 진입 (학생 데이터 로딩과 무관하게 즉시 시도)
       autoEnterTeacherEntry();
+      autoEnterScanEntry();
 
       // 학생 화면에 떠 있는 동안 담임 공지가 새로 올라오면 반영 — 60초마다, 화면이 켜져 있을 때만
       // (학생 수백 명이 짧은 간격으로 계속 요청하면 서버가 느려지므로 간격을 늘렸습니다.)
@@ -1324,6 +1373,7 @@
 
     // 1. 실시간 비디오 스트림 스캐너
     function toggleQrScanner() {
+      unlockAudio();
       const container = document.getElementById('reader-container');
       const btn = document.getElementById('btnToggleScan');
 
@@ -1485,6 +1535,7 @@
 
     // 2. [참고용] 스마트폰 기본 카메라 촬영으로 즉시 QR 판독 (실시간 스캐너가 잘 되면 안 써도 됨)
     function triggerNativeCameraScan() {
+      unlockAudio();
       document.getElementById('nativeQrInput').click();
     }
 
@@ -1517,6 +1568,8 @@
       lastScannedData = decodedText;
       lastScanTime = now;
 
+      if (isScanOnly) { handleScanOnly(decodedText); return; }
+
       const parts = decodedText.split('_');
       let targetClass = '';
       let targetName = '';
@@ -1533,6 +1586,12 @@
         return s.name === targetName;
       });
 
+      if (targetStudent && targetStudent.checkedAssembly) {
+        playDup();
+        showScanToast(`🔁 이미 확인된 학생 (${targetStudent.gradeClass} ${targetStudent.name})`, 'dup');
+        return;
+      }
+
       if (targetStudent) {
         playBeep();
         targetStudent.checkedAssembly = true;
@@ -1546,21 +1605,31 @@
           room: targetStudent.room,
           eventType: evType,
           by: '교사QR스캔'
+        }).then(function(res) {
+          if (res && res.error) throw new Error(res.error);
         }).catch(function(err) {
           console.error('체크인 기록 실패:', err);
+          targetStudent.checkedAssembly = false;   // 서버에 저장되지 않았으니 화면에서도 되돌림
+          playErr();
+          showScanToast('⚠️ 전송 실패 – 인터넷을 확인하고 다시 찍어 주세요', 'err');
+          renderAssemblyTeacher();
         });
 
         renderAssemblyTeacher();
       } else {
-        showScanToast(`⚠️ 등록되지 않은 학생: ${decodedText}`);
+        playErr();
+        showScanToast(`⚠️ 등록되지 않은 학생: ${decodedText}`, 'err');
       }
     }
 
-    function showScanToast(msg) {
+    let scanToastTimer = null;
+    function showScanToast(msg, kind) {
       const toast = document.getElementById('scanToast');
       toast.innerText = msg;
+      toast.style.background = kind === 'err' ? '#ef4444' : (kind === 'dup' ? '#f59e0b' : '#22c55e');
       toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 2200);
+      clearTimeout(scanToastTimer);
+      scanToastTimer = setTimeout(() => { toast.style.display = 'none'; }, kind === 'err' ? 4500 : 2200);
     }
 
     // ── 방 점호 체크: 서버에 저장하고 여러 선생님 기기가 5초마다 동기화 ──
@@ -1717,6 +1786,10 @@
     })();
 
     function handleLockClick() {
+      if (isScanOnly) {
+        if (confirm('스캔 도우미 모드를 끝낼까요?')) exitScanMode();
+        return;
+      }
       if (isTeacher) {
         if (confirm("교사 모드에서 로그아웃하시겠습니까? (이 기기에 저장된 자동 로그인도 함께 해제됩니다)")) {
           stopScanner();
@@ -1739,6 +1812,7 @@
     }
 
     const TEACHER_PIN_STORAGE_KEY = 'suhak2026_teacherPinRemembered';
+    const SCAN_PIN_STORAGE_KEY = 'suhak2026_scanPinRemembered';
 
     function verifyTeacherPin() {
       const pin = document.getElementById('pinInput').value;
@@ -1756,13 +1830,19 @@
       //    그래서 PIN 확인은 즉시 끝내고, 무거운 명단 로딩은 화면 전환 이후 백그라운드에서 진행합니다.
       callApi('verifyPin', { pin: pin }).then(function(res) {
         if (opts.manual && authBtn) { authBtn.disabled = false; authBtn.innerText = '인증'; }
+        // 스캔 전용 PIN이면 교사 화면 대신 스캔 도우미 모드로 들어갑니다.
+        if (!res.valid && res.scanner) {
+          try { localStorage.setItem(SCAN_PIN_STORAGE_KEY, pin); } catch (e) {}
+          enterScanOnlyMode();
+          return;
+        }
         if (!res.valid) {
           if (opts.manual) {
             alert('❌ PIN 번호가 일치하지 않습니다.');
           } else {
             // 이 기기에 기억해둔 PIN으로 자동 로그인을 시도했는데 실패한 경우
             // (예: PIN이 바뀜) — 기억된 값을 지우고 수동 입력창을 띄워줍니다.
-            try { localStorage.removeItem(TEACHER_PIN_STORAGE_KEY); } catch (e) {}
+            try { localStorage.removeItem(opts.scan ? SCAN_PIN_STORAGE_KEY : TEACHER_PIN_STORAGE_KEY); } catch (e) {}
             targetTabAfterAuth = 'tab-assembly-teacher';
             document.getElementById('pinModal').style.display = 'flex';
             document.getElementById('pinInput').value = '';
@@ -1809,6 +1889,147 @@
       targetTabAfterAuth = 'tab-assembly-teacher';
       if (rememberedPin) {
         authenticateWithPin(rememberedPin, { manual: false });
+      } else {
+        document.getElementById('pinModal').style.display = 'flex';
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+      }
+    }
+
+
+    // ───────── 스캔 도우미 모드 ─────────
+    // 스캔 전용 PIN으로 들어오면 QR 스캔 화면만 보입니다 (명단·연락처·방배치 등 교사용 정보는 불러오지 않음).
+    let scanLocal = new Set();     // 이 기기에서 이 일정으로 성공한 체크
+    let scanServer = new Set();    // 서버에 이미 체크된 학생 ("반|이름")
+    let scanPollTimer = null;
+    let scanResultTimer = null;
+
+    function enterScanOnlyMode() {
+      isScanOnly = true;
+      isTeacher = false;
+      document.body.classList.add('scan-only');
+      closePinModal();
+      ['view-student-checkin', 'view-teacher-monitoring', 'tab-rollcall', 'tab-contacts', 'tab-notice'].forEach(function(id) {
+        const el = document.getElementById(id); if (el) el.style.display = 'none';
+      });
+      try { hideInfoTabs(); } catch (e) {}
+      const nav = document.querySelector('.top-nav'); if (nav) nav.style.display = 'none';
+      document.getElementById('globalClassChips').style.display = 'none';
+      document.getElementById('headerTeacherDoc').style.display = 'none';
+      document.getElementById('lockStatusBadge').innerText = '📷 스캔 도우미 (끝내기)';
+      document.getElementById('view-scan-only').style.display = 'block';
+      // 기존 스캐너(카메라 선택·삑 소리 포함)를 그대로 이 화면으로 옮겨 사용
+      const body = document.getElementById('qrAccordionBody');
+      document.getElementById('scanHost').appendChild(body);
+      body.style.display = 'block';
+      buildScanEventOptions();
+      startScanPolling();
+      unlockAudio();
+    }
+
+    function buildScanEventOptions(keepCurrent) {
+      const sel = document.getElementById('scanEventSelect');
+      const prev = sel.value;
+      const today = todayTripDay() + '일차';
+      const names = getAllCourseNames();
+      const todayNames = names.filter(function(n) { return evDay(n) === today; });
+      const otherNames = names.filter(function(n) { return evDay(n) && evDay(n) !== today; });
+      function opts(arr, labelFn) { return arr.map(function(n) { return '<option value="' + n.replace(/"/g, '&quot;') + '">' + labelFn(n) + '</option>'; }).join(''); }
+      let h = '';
+      if (todayNames.length) h += '<optgroup label="오늘(' + today + ') 일정">' + opts(todayNames, evLabel) + '</optgroup>';
+      if (otherNames.length) h += '<optgroup label="다른 날 일정">' + opts(otherNames, function(n) { return evDay(n) + ' · ' + evLabel(n); }) + '</optgroup>';
+      h += '<optgroup label="기타">' + opts(DEFAULT_EVENT_TYPES, function(n) { return n; }) + '</optgroup>';
+      sel.innerHTML = h;
+      if (keepCurrent && prev && Array.prototype.some.call(sel.options, function(o) { return o.value === prev; })) {
+        sel.value = prev;
+        return;
+      }
+      onScanEventChange();
+    }
+
+    function onScanEventChange() {
+      scanLocal = new Set();
+      scanServer = new Set();
+      document.getElementById('scanCountNum').innerText = '0';
+      setScanResult('idle', '대기 중', 'QR을 카메라에 비춰 주세요');
+      pollScanServer();
+    }
+
+    function pollScanServer() {
+      if (!isScanOnly) return;
+      const ev = document.getElementById('scanEventSelect').value;
+      callApi('getAssemblyStatus', { eventType: ev }).then(function(res) {
+        if (document.getElementById('scanEventSelect').value !== ev) return;
+        scanServer = new Set((res && res.checked) || []);
+      }).catch(function() {});
+    }
+    function startScanPolling() {
+      if (scanPollTimer) clearInterval(scanPollTimer);
+      scanPollTimer = setInterval(function() { if (!document.hidden) pollScanServer(); }, 6000);
+    }
+
+    function setScanResult(kind, big, small) {
+      const box = document.getElementById('scanResult');
+      box.className = 'scan-result ' + kind;
+      document.getElementById('scanResultBig').innerText = big;
+      document.getElementById('scanResultSmall').innerText = small;
+      clearTimeout(scanResultTimer);
+      if (kind !== 'idle') {
+        scanResultTimer = setTimeout(function() {
+          setScanResult('idle', '다음 학생', 'QR을 카메라에 비춰 주세요');
+        }, 2500);
+      }
+    }
+
+    function handleScanOnly(decodedText) {
+      const parts = decodedText.split('_');
+      let cls = '', name = '';
+      if (parts.length >= 3) { cls = parts[0].trim(); name = parts[2].trim(); } else { name = decodedText.trim(); }
+      const stu = simpleStudents.find(function(s) { return cls ? (s.gradeClass === cls && s.name === name) : s.name === name; });
+      if (!stu) {
+        playErr();
+        setScanResult('err', '✖ 등록 안 된 QR', simpleStudents.length ? '다시 찍어 보세요' : '명단을 아직 못 불러왔어요 (새로고침)');
+        return;
+      }
+      const key = stu.gradeClass + '|' + stu.name;
+      const label = stu.gradeClass + (stu.num ? ' ' + stu.num + '번' : '');
+      if (scanLocal.has(key) || scanServer.has(key)) {
+        playDup();
+        setScanResult('dup', '이미 체크됨', label);
+        return;
+      }
+      const ev = document.getElementById('scanEventSelect').value;
+      // 소리·화면은 즉시 반응하고, 서버 저장은 뒤에서 처리 (실패하면 바로 알림)
+      scanLocal.add(key);
+      playBeep();
+      setScanResult('ok', '✓ 체크 완료', label);
+      document.getElementById('scanCountNum').innerText = String(scanLocal.size);
+      callApi('checkStudent', { gradeClass: stu.gradeClass, name: stu.name, room: '', eventType: ev, by: '학생도우미QR' })
+        .then(function(res) { if (res && res.error) throw new Error(res.error); })
+        .catch(function(err) {
+          console.error('체크인 기록 실패:', err);
+          scanLocal.delete(key);
+          document.getElementById('scanCountNum').innerText = String(scanLocal.size);
+          playErr();
+          setScanResult('err', '✖ 전송 실패', '인터넷을 확인하고 다시 찍어 주세요 (' + label + ')');
+        });
+    }
+
+    function exitScanMode() {
+      try { stopScanner(); } catch (e) {}
+      if (scanPollTimer) clearInterval(scanPollTimer);
+      try { localStorage.removeItem(SCAN_PIN_STORAGE_KEY); } catch (e) {}
+      location.href = location.pathname;
+    }
+
+    // 스캔 전용 링크(?entry=scan): 이 기기에 기억된 스캔 PIN이 있으면 바로 들어가고, 없으면 PIN 입력창을 띄웁니다.
+    function autoEnterScanEntry() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('entry') !== 'scan') return;
+      let remembered = null;
+      try { remembered = localStorage.getItem(SCAN_PIN_STORAGE_KEY); } catch (e) {}
+      if (remembered) {
+        authenticateWithPin(remembered, { manual: false, scan: true });
       } else {
         document.getElementById('pinModal').style.display = 'flex';
         document.getElementById('pinInput').value = '';
