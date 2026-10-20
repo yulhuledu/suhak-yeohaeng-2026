@@ -648,8 +648,8 @@
   <!-- 교사 PIN 모달 -->
   <div class="modal-overlay" id="pinModal">
     <div class="modal-content" style="text-align:center;">
-      <h3 style="font-size:1.15rem; font-weight:800; margin-bottom:8px;">🔒 교사 · 스캔 도우미 인증</h3>
-      <p style="font-size:0.85rem; color:var(--gray); margin-bottom:16px;">학생 정보 보호를 위해 PIN 번호를 입력하세요.</p>
+      <h3 id="pinModalTitle" style="font-size:1.15rem; font-weight:800; margin-bottom:8px;">🔒 교사 인증</h3>
+      <p id="pinModalDesc" style="font-size:0.85rem; color:var(--gray); margin-bottom:16px;">학생 정보 보호를 위해 PIN 번호를 입력하세요.</p>
       <input type="password" id="pinInput" maxlength="6" placeholder="PIN 4자리" style="width:70%; font-size:1.4rem; letter-spacing:6px; text-align:center; padding:10px; border:2px solid var(--border); border-radius:10px; outline:none; margin-bottom:16px;">
       <div style="display:flex; gap:8px;">
         <button onclick="closePinModal()" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border); background:#fff; font-weight:bold;">취소</button>
@@ -1772,18 +1772,27 @@
       document.getElementById('headerTeacherDoc').style.display = isTeacher ? 'inline-block' : 'none';
     }
 
+    // 입구가 둘: 왼쪽 교표 = 교사, 오른쪽 교표 = 스캔 도우미. 각 입구에서는 자기 PIN만 통과합니다.
+    let pinRole = 'teacher';
+    function openPinModal(role) {
+      pinRole = role;
+      document.getElementById('pinModalTitle').innerText = role === 'scan' ? '📷 스캔 도우미 인증' : '🔒 교사 인증';
+      document.getElementById('pinModalDesc').innerText = role === 'scan' ? '스캔 도우미 PIN 번호를 입력하세요.' : '학생 정보 보호를 위해 교사 PIN 번호를 입력하세요.';
+      document.getElementById('pinModal').style.display = 'flex';
+      document.getElementById('pinInput').value = '';
+      document.getElementById('pinInput').focus();
+    }
+
     function requireTeacherAuth(targetTab) {
       if (isTeacher) {
         goToTab(targetTab);
       } else {
         targetTabAfterAuth = targetTab;
-        document.getElementById('pinModal').style.display = 'flex';
-        document.getElementById('pinInput').value = '';
-        document.getElementById('pinInput').focus();
+        openPinModal('teacher');
       }
     }
 
-    // 교사 로그인 숨은 입구: 제목의 교표를 3초 안에 5번 누르면 PIN 입력창이 열립니다.
+    // 숨은 입구: 왼쪽 교표 5번(3초 이내) = 교사 로그인, 오른쪽 교표 5번 = 스캔 도우미 로그인
     (function() {
       var taps = [];
       document.addEventListener('DOMContentLoaded', function() {
@@ -1793,6 +1802,14 @@
         var twin = el.cloneNode(false);
         twin.removeAttribute('id'); twin.alt = ''; twin.style.margin = '0 0 0 4px';
         el.parentNode.appendChild(twin);
+        // 오른쪽 교표 5번 = 스캔 도우미 입구
+        var taps2 = [];
+        twin.addEventListener('click', function() {
+          var now = Date.now();
+          taps2 = taps2.filter(function(t) { return now - t < 3000; });
+          taps2.push(now);
+          if (taps2.length >= 5) { taps2 = []; if (isScanOnly) { handleLockClick(); } else if (!isTeacher) { openPinModal('scan'); } }
+        });
         el.addEventListener('click', function() {
           var now = Date.now();
           taps = taps.filter(function(t) { return now - t < 3000; });
@@ -1847,6 +1864,9 @@
       //    그래서 PIN 확인은 즉시 끝내고, 무거운 명단 로딩은 화면 전환 이후 백그라운드에서 진행합니다.
       callApi('verifyPin', { pin: pin }).then(function(res) {
         if (opts.manual && authBtn) { authBtn.disabled = false; authBtn.innerText = '인증'; }
+        // 입구와 PIN 종류가 맞아야 통과: 교사 입구(왼쪽 교표)에서는 교사 PIN만, 도우미 입구(오른쪽 교표)에서는 도우미 PIN만
+        const role = opts.scan ? 'scan' : (opts.manual ? pinRole : 'teacher');
+        if ((role === 'teacher' && !res.valid) || (role === 'scan' && !res.scanner)) { res = { valid: false, scanner: false }; }
         // 스캔 전용 PIN이면 교사 화면 대신 스캔 도우미 모드로 들어갑니다.
         if (!res.valid && res.scanner) {
           try { localStorage.setItem(SCAN_PIN_STORAGE_KEY, pin); } catch (e) {}
@@ -1861,8 +1881,7 @@
             // (예: PIN이 바뀜) — 기억된 값을 지우고 수동 입력창을 띄워줍니다.
             try { localStorage.removeItem(opts.scan ? SCAN_PIN_STORAGE_KEY : TEACHER_PIN_STORAGE_KEY); } catch (e) {}
             targetTabAfterAuth = 'tab-assembly-teacher';
-            document.getElementById('pinModal').style.display = 'flex';
-            document.getElementById('pinInput').value = '';
+            openPinModal(opts.scan ? 'scan' : 'teacher');
           }
           return;
         }
@@ -1907,9 +1926,7 @@
       if (rememberedPin) {
         authenticateWithPin(rememberedPin, { manual: false });
       } else {
-        document.getElementById('pinModal').style.display = 'flex';
-        document.getElementById('pinInput').value = '';
-        document.getElementById('pinInput').focus();
+        openPinModal('teacher');
       }
     }
 
@@ -2083,9 +2100,7 @@
       if (remembered) {
         authenticateWithPin(remembered, { manual: false, scan: true });
       } else {
-        document.getElementById('pinModal').style.display = 'flex';
-        document.getElementById('pinInput').value = '';
-        document.getElementById('pinInput').focus();
+        openPinModal('scan');
       }
     }
 
