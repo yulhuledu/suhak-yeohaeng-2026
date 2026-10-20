@@ -568,7 +568,7 @@
     <div id="tab-emergency" style="display:none;">
       <div class="info-card">
         <h2>🚨 긴급연락처</h2>
-        <p class="muted">몸이 아프거나 길을 잃었거나 일행과 떨어졌을 때 바로 연락하세요. 위급한 상황(사고·응급)은 아래 <b>119</b>에 먼저 연락하세요.</p>
+        <p class="muted">몸이 아프거나 길을 잃었거나 일행과 떨어졌을 때 바로 연락하세요. 위급한 상황(사고·응급)은 아래 <b>119</b>에 먼저 연락하세요. 반을 누르면 바로 전화가 걸려요.</p>
         <div style="display:flex; gap:8px; margin:4px 0 10px;">
           <a href="tel:119" style="flex:1; text-align:center; padding:14px; font-size:1.05rem; border-radius:10px; background:#fee2e2; color:#b91c1c; font-weight:800; text-decoration:none;">🚑 119 응급</a>
           <a href="tel:112" style="flex:1; text-align:center; padding:14px; font-size:1.05rem; border-radius:10px; background:#e0f2fe; color:#0369a1; font-weight:800; text-decoration:none;">🚓 112 경찰</a>
@@ -2318,14 +2318,17 @@
         return;
       }
       const myCls = (document.getElementById('studentClassSelect') || {}).value || '';
-      list.innerHTML = emergencyItems.map(function(it) {
+      const cells = emergencyItems.map(function(it) {
         const t = telDigits(it.tel);
         const mine = myCls && String(it.label).indexOf(myCls) === 0;
-        return '<div style="display:flex; align-items:center; gap:8px; padding:11px ' + (mine ? '10px' : '0') + '; border-top:1px solid var(--border);' + (mine ? ' background:#eff6ff; border-radius:10px;' : '') + '">' +
-          '<div style="flex:1; min-width:0;"><div style="font-weight:800; font-size:0.98rem;">' + escEmg(it.label || it.name) + (mine ? ' <span style="font-size:0.72rem; color:var(--primary);">우리 반</span>' : '') + '</div>' + (it.note ? '<div class="muted" style="font-size:0.78rem;">' + escEmg(it.note) + '</div>' : '') + '</div>' +
-          (t ? '<a href="tel:' + t + '" style="padding:10px 14px; border-radius:10px; background:var(--primary); color:#fff; font-weight:800; font-size:0.85rem; text-decoration:none;">📞 전화</a><a href="sms:' + t + '" style="padding:10px 14px; border-radius:10px; background:#e2e8f0; color:#334155; font-weight:800; font-size:0.85rem; text-decoration:none;">💬 문자</a>' : '<span class="muted" style="font-size:0.78rem;">번호 미등록</span>') +
-          '</div>';
-      }).join('');
+        const inner = '<div style="font-weight:800; font-size:0.95rem;">' + escEmg(it.label || it.name) + '</div>' +
+          '<div style="font-size:0.74rem; margin-top:2px; opacity:0.85;">' + (t ? '📞 ' + (it.note ? escEmg(it.note) : '전화하기') : '번호 미등록') + '</div>';
+        const base = 'display:block; text-align:center; padding:13px 6px; border-radius:12px; text-decoration:none; min-width:0; ';
+        if (!t) return '<div style="' + base + 'background:#f1f5f9; color:#94a3b8;">' + inner + '</div>';
+        return '<a href="tel:' + t + '" style="' + base + (mine ? 'background:var(--primary); color:#fff;' : 'background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe;') + '">' + inner + '</a>';
+      });
+      list.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;';
+      list.innerHTML = cells.join('');
     }
 
     const PREP_GROUPS = [
