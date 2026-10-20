@@ -382,12 +382,14 @@
       <div class="scan-event-box">
         <label for="scanEventSelect">지금 확인하는 일정</label>
         <select id="scanEventSelect" onchange="onScanEventChange()"></select>
+        <label for="scanClassSelect" style="margin-top:10px;">내가 확인하는 반</label>
+        <select id="scanClassSelect" onchange="onScanClassChange()"></select>
       </div>
       <div id="scanResult" class="scan-result idle">
         <div class="big" id="scanResultBig">대기 중</div>
         <div class="small" id="scanResultSmall">QR을 카메라에 비춰 주세요</div>
       </div>
-      <div class="scan-count">이 일정에서 이 기기로 체크한 학생 <b id="scanCountNum">0</b>명</div>
+      <div class="scan-count" id="scanCountBox">이 일정에서 이 기기로 체크한 학생 <b id="scanCountNum">0</b>명</div>
       <div id="scanHost"></div>
       <button type="button" class="btn-exit-scan" onclick="exitScanMode()">도우미 모드 끝내기</button>
     </div>
@@ -1927,7 +1929,35 @@
       unlockAudio();
     }
 
+    const SCAN_CLASS_KEY = 'suhak2026_scanClass';
+    function buildScanClassOptions() {
+      const sel = document.getElementById('scanClassSelect');
+      if (!sel) return;
+      const prev = sel.value || (function() { try { return localStorage.getItem(SCAN_CLASS_KEY) || ''; } catch (e) { return ''; } })();
+      const seen = {};
+      simpleStudents.forEach(function(s) { if (s.gradeClass) seen[s.gradeClass] = true; });
+      const list = Object.keys(seen).sort(function(a, b) { return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0); });
+      sel.innerHTML = '<option value="">전체 반 (구분 없이)</option>' + list.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+      if (prev && seen[prev]) sel.value = prev;
+      updateScanCount();
+    }
+    function onScanClassChange() {
+      try { localStorage.setItem(SCAN_CLASS_KEY, document.getElementById('scanClassSelect').value); } catch (e) {}
+      setScanResult('idle', '대기 중', 'QR을 카메라에 비춰 주세요');
+      updateScanCount();
+    }
+    function updateScanCount() {
+      const box = document.getElementById('scanCountBox');
+      if (!box) return;
+      const cls = document.getElementById('scanClassSelect').value;
+      if (!cls) { box.innerHTML = '이 일정에서 이 기기로 체크한 학생 <b id="scanCountNum">' + scanLocal.size + '</b>명'; return; }
+      const all = simpleStudents.filter(function(s) { return s.gradeClass === cls; });
+      const done = all.filter(function(s) { const k = s.gradeClass + '|' + s.name; return scanLocal.has(k) || scanServer.has(k); }).length;
+      box.innerHTML = cls + ' 체크 완료 <b id="scanCountNum">' + done + '</b> / ' + all.length + '명';
+    }
+
     function buildScanEventOptions(keepCurrent) {
+      buildScanClassOptions();
       const sel = document.getElementById('scanEventSelect');
       const prev = sel.value;
       const today = todayTripDay() + '일차';
@@ -1950,7 +1980,7 @@
     function onScanEventChange() {
       scanLocal = new Set();
       scanServer = new Set();
-      document.getElementById('scanCountNum').innerText = '0';
+      updateScanCount();
       setScanResult('idle', '대기 중', 'QR을 카메라에 비춰 주세요');
       pollScanServer();
     }
@@ -1961,6 +1991,7 @@
       callApi('getAssemblyStatus', { eventType: ev }).then(function(res) {
         if (document.getElementById('scanEventSelect').value !== ev) return;
         scanServer = new Set((res && res.checked) || []);
+        updateScanCount();
       }).catch(function() {});
     }
     function startScanPolling() {
@@ -1993,6 +2024,12 @@
       }
       const key = stu.gradeClass + '|' + stu.name;
       const label = stu.gradeClass + (stu.num ? ' ' + stu.num + '번' : '');
+      const myCls = document.getElementById('scanClassSelect').value;
+      if (myCls && stu.gradeClass !== myCls) {
+        playErr();
+        setScanResult('err', '✖ 다른 반 학생', label + ' · 체크 안 함 (내 반: ' + myCls + ')');
+        return;
+      }
       if (scanLocal.has(key) || scanServer.has(key)) {
         playDup();
         setScanResult('dup', '이미 체크됨', label);
@@ -2003,13 +2040,13 @@
       scanLocal.add(key);
       playBeep();
       setScanResult('ok', '✓ 체크 완료', label);
-      document.getElementById('scanCountNum').innerText = String(scanLocal.size);
+      updateScanCount();
       callApi('checkStudent', { gradeClass: stu.gradeClass, name: stu.name, room: '', eventType: ev, by: '학생도우미QR' })
         .then(function(res) { if (res && res.error) throw new Error(res.error); })
         .catch(function(err) {
           console.error('체크인 기록 실패:', err);
           scanLocal.delete(key);
-          document.getElementById('scanCountNum').innerText = String(scanLocal.size);
+          updateScanCount();
           playErr();
           setScanResult('err', '✖ 전송 실패', '인터넷을 확인하고 다시 찍어 주세요 (' + label + ')');
         });
