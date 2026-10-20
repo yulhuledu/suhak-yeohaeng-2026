@@ -363,11 +363,8 @@
         <div class="ev-list" id="evList" style="display:none;"></div>
         <select id="studentEventTypeSelect" style="display:none;">
           <option value="">선택 안 함</option>
-          <option value="🚌 버스 탑승">🚌 버스 탑승 (승차 완료)</option>
-          <option value="📍 장소/체험지 집결">📍 장소/체험지 집결 완료</option>
-          <option value="🍽️ 식당 도착">🍽️ 식당 도착</option>
-          <option value="🛏️ 숙소 도착">🛏️ 숙소 도착</option>
-          <option value="🚶 버스 하차">🚶 버스 하차</option>
+          <option value="🌅 조회">🌅 조회</option>
+          <option value="🌇 종례">🌇 종례</option>
         </select>
 
         <button class="btn-checkin" onclick="submitCheckin()">이 상태로 체크인 보내기</button>
@@ -406,7 +403,7 @@
       <div class="status-card">
         <div class="status-header">
           <div>
-            <span style="font-weight:800; font-size:0.95rem;" id="currentStatusTitle">🚌 버스 탑승 현황</span>
+            <span style="font-weight:800; font-size:0.95rem;" id="currentStatusTitle">🌅 조회 현황</span>
             <div style="font-size:0.72rem; color:var(--gray); margin-top:2px;" id="lastResetTime">시작 시간: 자동 기록중</div>
           </div>
           <span class="status-badge" id="assemblyCountBadge">0 / 0명</span>
@@ -417,17 +414,14 @@
       <div class="control-panel" style="display:block;">
         <div class="ev-card" id="tevCard" style="margin-bottom:0;">
           <div class="ev-card-label">확인할 일정</div>
-          <div class="ev-card-main" id="tevCardMain">🚌 버스 탑승</div>
+          <div class="ev-card-main" id="tevCardMain">🌅 조회</div>
           <div class="ev-card-sub" id="tevCardSub"></div>
           <button type="button" class="ev-change" id="tevChangeBtn" onclick="toggleTeacherEventPick()">다른 일정 선택하기 ▾</button>
         </div>
         <div class="ev-list" id="tevList" style="display:none; margin:10px 0 0;"></div>
         <select class="control-select" id="teacherEventTypeSelect" style="display:none;" onchange="syncAssemblyStatus()">
-          <option value="🚌 버스 탑승">🚌 버스 탑승</option>
-          <option value="📍 장소/체험지 집결">📍 장소/체험지 집결</option>
-          <option value="🍽️ 식당 도착">🍽️ 식당 도착</option>
-          <option value="🛏️ 숙소 도착">🛏️ 숙소 도착</option>
-          <option value="🚶 버스 하차">🚶 버스 하차</option>
+          <option value="🌅 조회">🌅 조회</option>
+          <option value="🌇 종례">🌇 종례</option>
         </select>
       </div>
 
@@ -497,7 +491,7 @@
           <span class="chev" id="resetAccordionChev">▾</span>
         </div>
         <div id="resetAccordionBody" class="accordion-body" style="display:none;">
-          <p style="font-size:0.78rem; color:var(--gray); margin-bottom:10px;">지금 선택된 「<span id="resetEventTypeLabel">🚌 버스 탑승</span>」 항목의 체크 현황이 전부 초기화돼요. 되돌릴 수 없으니 정말 새로 시작할 때만 눌러주세요.</p>
+          <p style="font-size:0.78rem; color:var(--gray); margin-bottom:10px;">지금 선택된 「<span id="resetEventTypeLabel">🌅 조회</span>」 항목의 체크 현황이 전부 초기화돼요. 되돌릴 수 없으니 정말 새로 시작할 때만 눌러주세요.</p>
           <button class="btn-reset" style="width:100%;" onclick="resetCurrentAssembly()">🔄 초기화 진행</button>
         </div>
       </div>
@@ -776,7 +770,7 @@
     let courseConfig = { classToGroup: {}, groupCourses: {} };
     let currentGroupFilter = '전체';
 
-    const DEFAULT_EVENT_TYPES = ['🚌 버스 탑승', '📍 장소/체험지 집결', '🍽️ 식당 도착', '🛏️ 숙소 도착', '🚶 버스 하차'];
+    const DEFAULT_EVENT_TYPES = ['🌅 조회', '🌇 종례'];
 
     // 기본 상태 목록 + 코스명 목록을 합쳐서 <option> HTML 생성 (중복 제거)
     function buildEventTypeOptionsHtml(extraCourses) {
