@@ -568,17 +568,12 @@
     <div id="tab-emergency" style="display:none;">
       <div class="info-card">
         <h2>🚨 긴급연락처</h2>
-        <p class="muted">몸이 아프거나 길을 잃었거나 일행과 떨어졌을 때 바로 연락하세요. 선생님을 고르면 전화·문자 버튼이 나와요. 위급한 상황(사고·응급)은 <b>119</b>에 먼저 연락하세요.</p>
-        <select id="emgSelect" onchange="renderEmergencySelected()" style="width:100%; margin-top:8px; padding:11px 12px; border:1px solid var(--border); border-radius:10px; font-size:0.95rem; font-weight:700; background:#fff;"></select>
-        <div id="emgSelected" style="margin-top:10px;"></div>
-      </div>
-      <div class="info-card">
-        <h3 style="font-size:0.95rem; font-weight:800; color:var(--primary); margin:0 0 8px;">전체 선생님</h3>
-        <div id="emgList"></div>
-        <div style="display:flex; gap:8px; margin-top:12px;">
-          <a href="tel:119" style="flex:1; text-align:center; padding:11px; border-radius:10px; background:#fee2e2; color:#b91c1c; font-weight:800; text-decoration:none;">🚑 119 응급</a>
-          <a href="tel:112" style="flex:1; text-align:center; padding:11px; border-radius:10px; background:#e0f2fe; color:#0369a1; font-weight:800; text-decoration:none;">🚓 112 경찰</a>
+        <p class="muted">몸이 아프거나 길을 잃었거나 일행과 떨어졌을 때 바로 연락하세요. 위급한 상황(사고·응급)은 아래 <b>119</b>에 먼저 연락하세요.</p>
+        <div style="display:flex; gap:8px; margin:4px 0 10px;">
+          <a href="tel:119" style="flex:1; text-align:center; padding:14px; font-size:1.05rem; border-radius:10px; background:#fee2e2; color:#b91c1c; font-weight:800; text-decoration:none;">🚑 119 응급</a>
+          <a href="tel:112" style="flex:1; text-align:center; padding:14px; font-size:1.05rem; border-radius:10px; background:#e0f2fe; color:#0369a1; font-weight:800; text-decoration:none;">🚓 112 경찰</a>
         </div>
+        <div id="emgList" style="margin-top:6px;"></div>
       </div>
     </div>
 
@@ -2315,46 +2310,22 @@
     let emergencyItems = [];
     function telDigits(t) { return String(t || '').replace(/[^0-9+]/g, ''); }
     function escEmg(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-    function emgLabel(it) { return (it.label ? it.label + ' · ' : '') + it.name; }
-    function emgButtons(it) {
-      const t = telDigits(it.tel);
-      if (!t) return '<div class="muted" style="font-size:0.82rem;">전화번호가 아직 등록되지 않았어요</div>';
-      return '<div style="display:flex; gap:8px;"><a href="tel:' + t + '" style="flex:1; text-align:center; padding:12px; border-radius:10px; background:var(--primary); color:#fff; font-weight:800; text-decoration:none;">📞 전화</a>' +
-             '<a href="sms:' + t + '" style="flex:1; text-align:center; padding:12px; border-radius:10px; background:#e2e8f0; color:#334155; font-weight:800; text-decoration:none;">💬 문자</a></div>';
-    }
     function renderEmergencyTab() {
-      const sel = document.getElementById('emgSelect');
-      if (!sel) return;
       const list = document.getElementById('emgList');
+      if (!list) return;
       if (!emergencyItems.length) {
-        sel.innerHTML = '<option value="">등록된 연락처가 없어요</option>';
-        document.getElementById('emgSelected').innerHTML = '<div class="muted" style="font-size:0.85rem;">연락처가 아직 등록되지 않았어요. 인솔 선생님께 직접 문의해 주세요.</div>';
-        list.innerHTML = '';
+        list.innerHTML = '<div class="muted" style="font-size:0.85rem; padding:8px 0;">연락처가 아직 등록되지 않았어요. 인솔 선생님께 직접 문의해 주세요.</div>';
         return;
       }
-      const prev = sel.value;
-      sel.innerHTML = emergencyItems.map(function(it, i) { return '<option value="' + i + '">' + escEmg(emgLabel(it)) + '</option>'; }).join('');
-      let idx = prev !== '' && emergencyItems[+prev] ? +prev : -1;
-      if (idx < 0) {   // 처음에는 내가 고른 반 담임을 먼저 보여줌
-        const myCls = (document.getElementById('studentClassSelect') || {}).value || '';
-        idx = myCls ? emergencyItems.findIndex(function(it) { return String(it.label).indexOf(myCls) === 0; }) : -1;
-        if (idx < 0) idx = 0;
-      }
-      sel.value = String(idx);
-      renderEmergencySelected();
-      list.innerHTML = emergencyItems.map(function(it, i) {
+      const myCls = (document.getElementById('studentClassSelect') || {}).value || '';
+      list.innerHTML = emergencyItems.map(function(it) {
         const t = telDigits(it.tel);
-        return '<div style="display:flex; align-items:center; gap:8px; padding:9px 0; border-top:1px solid var(--border);">' +
-          '<div style="flex:1; min-width:0;"><div style="font-weight:700; font-size:0.9rem;">' + escEmg(it.name) + '</div><div class="muted" style="font-size:0.78rem;">' + escEmg(it.label) + (it.note ? ' · ' + escEmg(it.note) : '') + '</div></div>' +
-          (t ? '<a href="tel:' + t + '" style="padding:8px 12px; border-radius:8px; background:var(--primary); color:#fff; font-weight:700; font-size:0.82rem; text-decoration:none;">📞</a><a href="sms:' + t + '" style="padding:8px 12px; border-radius:8px; background:#e2e8f0; color:#334155; font-weight:700; font-size:0.82rem; text-decoration:none;">💬</a>' : '<span class="muted" style="font-size:0.78rem;">번호 미등록</span>') +
+        const mine = myCls && String(it.label).indexOf(myCls) === 0;
+        return '<div style="display:flex; align-items:center; gap:8px; padding:11px ' + (mine ? '10px' : '0') + '; border-top:1px solid var(--border);' + (mine ? ' background:#eff6ff; border-radius:10px;' : '') + '">' +
+          '<div style="flex:1; min-width:0;"><div style="font-weight:800; font-size:0.98rem;">' + escEmg(it.label || it.name) + (mine ? ' <span style="font-size:0.72rem; color:var(--primary);">우리 반</span>' : '') + '</div>' + (it.note ? '<div class="muted" style="font-size:0.78rem;">' + escEmg(it.note) + '</div>' : '') + '</div>' +
+          (t ? '<a href="tel:' + t + '" style="padding:10px 14px; border-radius:10px; background:var(--primary); color:#fff; font-weight:800; font-size:0.85rem; text-decoration:none;">📞 전화</a><a href="sms:' + t + '" style="padding:10px 14px; border-radius:10px; background:#e2e8f0; color:#334155; font-weight:800; font-size:0.85rem; text-decoration:none;">💬 문자</a>' : '<span class="muted" style="font-size:0.78rem;">번호 미등록</span>') +
           '</div>';
       }).join('');
-    }
-    function renderEmergencySelected() {
-      const it = emergencyItems[+document.getElementById('emgSelect').value];
-      const box = document.getElementById('emgSelected');
-      if (!it) { box.innerHTML = ''; return; }
-      box.innerHTML = '<div style="border:1px solid var(--border); border-radius:12px; padding:12px; background:#f8fafc;"><div style="font-weight:800; font-size:1.02rem; margin-bottom:2px;">' + escEmg(it.name) + '</div><div class="muted" style="font-size:0.82rem; margin-bottom:10px;">' + escEmg(it.label) + (it.note ? ' · ' + escEmg(it.note) : '') + '</div>' + emgButtons(it) + '</div>';
     }
 
     const PREP_GROUPS = [
