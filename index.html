@@ -612,6 +612,11 @@
           <div id="voteClassStats"></div>
           <button onclick="refreshVoteResults()" style="margin-top:10px; width:100%; padding:10px; border:1px solid var(--border); border-radius:10px; background:#fff; font-weight:700; cursor:pointer;">🔄 새로고침</button>
         </div>
+        <div class="info-card">
+          <h3 style="margin:0 0 6px; font-size:0.95rem; font-weight:800; color:#b91c1c;">투표 초기화</h3>
+          <p class="muted" style="font-size:0.78rem; margin:0 0 8px;">모든 투표 기록을 지우고 처음부터 다시 받을 수 있어요. 지우기 전 기록은 구글 시트에 <b>'투표기록_백업_날짜'</b> 탭으로 자동 보관돼요. 학생들이 투표했던 표시도 함께 풀려요.</p>
+          <button onclick="resetVotesClick()" style="width:100%; padding:10px; border:1px solid #fecaca; border-radius:10px; background:#fff1f2; color:#b91c1c; font-weight:800; cursor:pointer;">🗑️ 투표 전체 초기화</button>
+        </div>
       </div>
     </div>
 
@@ -2409,7 +2414,7 @@
     let teacherPinValue = '';
     let voteTimer = null;
     const VOTE_ERR = { VOTE_CLOSED: '투표가 마감되었어요.', ALREADY_VOTED: '이미 투표한 학생이에요. (한 번만 투표할 수 있어요)', NOT_IN_ROSTER: '명단에서 이름을 찾지 못했어요. 선생님께 문의해 주세요.', BAD_PICKS: '팀을 정확히 2팀 골라 주세요.', NO_STUDENT: '반과 이름을 먼저 골라 주세요.', PIN_INVALID: '교사 인증이 필요해요.', UNKNOWN_ACTION: '서버(Code.gs)를 새 버전으로 배포해야 이 기능을 쓸 수 있어요.' };
-    function voteKeyOf(cls, name) { return 'suhak2026_voted_' + cls + '|' + name; }
+    function voteKeyOf(cls, name) { return 'suhak2026_voted_' + ((voteInfo && voteInfo.epoch) || '0') + '_' + cls + '|' + name; }
     function updateVoteNav() {
       const btn = document.getElementById('navBtnVote');
       if (!btn) return;
@@ -2559,6 +2564,15 @@
           '<div style="margin-top:6px; font-size:0.78rem; color:var(--gray);">투표함 (✕ = 투표 취소해서 다시 하게 하기)</div><div>' + (voters || '<span class="muted">없음</span>') + '</div>' +
           '<div style="margin-top:6px; font-size:0.78rem; color:var(--gray);">아직 안 함</div><div>' + (non || '<span class="muted">없음</span>') + '</div></details>';
       }).join('');
+    }
+    function resetVotesClick() {
+      if (!confirm('장기자랑 투표를 모두 초기화할까요?\n지금까지의 투표가 전부 지워지고, 학생들이 다시 투표할 수 있게 됩니다.\n(지우기 전 기록은 시트에 백업돼요)')) return;
+      if (!confirm('정말 초기화합니다. 되돌릴 수 없어요.\n계속할까요?')) return;
+      callApi('resetVotes', { pin: teacherPinValue }).then(function(res) {
+        if (res && res.error) { alert('초기화에 실패했어요: ' + res.error); return; }
+        refreshVoteResults();
+        alert('✅ 투표가 초기화되었어요.' + (res && res.backup ? '\n이전 기록은 시트 \'' + res.backup + '\' 탭에 보관됐어요.' : ''));
+      }).catch(function() { alert('초기화 요청에 실패했어요. 인터넷을 확인하고 다시 눌러 주세요.'); });
     }
     function cancelVoteClick(cls, name) {
       if (!confirm(cls + ' ' + name + ' 학생의 투표를 취소할까요?\n(그 학생은 다시 투표할 수 있어요)')) return;
