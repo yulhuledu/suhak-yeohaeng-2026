@@ -293,6 +293,7 @@
 
   <div class="top-nav">
     <button class="top-nav-btn active" id="navBtnAssembly" onclick="switchMainTab('tab-assembly')">📍 집합 점검</button>
+    <button class="top-nav-btn" id="navBtnVote" style="display:none;" onclick="openInfoTab('tab-vote')">🗳️ 장기자랑 투표</button>
     <button class="top-nav-btn" id="navBtnEmergency" onclick="openInfoTab('tab-emergency')">🚨 긴급연락처</button>
     <button class="top-nav-btn" id="navBtnCourse" onclick="openInfoTab('tab-course')">🗺️ 코스 안내</button>
     <button class="top-nav-btn" id="navBtnPrep" onclick="openInfoTab('tab-prep')">🧳 여행 준비</button>
@@ -577,6 +578,49 @@
       </div>
     </div>
 
+    <!-- 장기자랑 투표 (학생: 투표 열림 중에만 표시 / 교사: 열기·마감·결과) -->
+    <div id="tab-vote" style="display:none;">
+      <div id="voteStudentBox">
+        <div class="info-card">
+          <h2>🗳️ 장기자랑 투표</h2>
+          <p class="muted" id="voteIntro">반과 이름을 고르고, <b>가장 잘한 팀 2팀</b>을 체크한 뒤 제출하세요. 투표는 <b>한 번만</b> 할 수 있어요.</p>
+          <div id="voteClosedMsg" style="display:none; margin-top:10px; padding:12px; border-radius:10px; background:#f1f5f9; color:#475569; font-weight:700;"></div>
+          <div id="voteForm">
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <select id="voteClassSelect" class="control-select" style="flex:1;" onchange="onVoteClassChange()"></select>
+              <select id="voteNameSelect" class="control-select" style="flex:1.3;" onchange="onVoteNameChange()"></select>
+            </div>
+            <div id="voteDoneMsg" style="display:none; margin-top:12px; padding:12px; border-radius:10px; background:#dcfce7; color:#166534; font-weight:800;">✅ 투표가 완료되었어요. 고마워요!</div>
+            <div id="voteBallot">
+              <div style="margin:14px 0 6px; font-size:0.85rem; font-weight:800; color:var(--primary);">가장 잘한 팀 <span id="voteCount">0</span> / 2 선택</div>
+              <div id="voteList"></div>
+              <button id="voteSubmitBtn" onclick="submitVoteClick()" style="margin-top:12px; width:100%; padding:13px; border:none; border-radius:10px; background:var(--primary); color:#fff; font-weight:800; font-size:1rem; cursor:pointer;" disabled>투표 제출하기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="voteTeacherBox" style="display:none;">
+        <div class="info-card">
+          <h2>🗳️ 장기자랑 투표 관리 <span style="font-size:0.7rem; color:#b91c1c; font-weight:700;">교사 전용</span></h2>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+            <span id="voteStatusBadge" style="padding:6px 12px; border-radius:99px; font-weight:800; font-size:0.85rem; background:#e2e8f0; color:#475569;">상태 확인 중…</span>
+            <button id="voteToggleBtn" onclick="toggleVoteOpen()" style="flex:1; padding:11px; border:none; border-radius:10px; background:var(--primary); color:#fff; font-weight:800; cursor:pointer;" disabled>투표 열기</button>
+          </div>
+          <p class="muted" style="margin-top:8px; font-size:0.78rem;">투표를 열면 학생 화면 맨 위 메뉴에 '🗳️ 장기자랑 투표' 탭이 나타나고, 마감하면 사라져요. 투표 대상은 구글 시트 <b>'투표대상'</b>에 적어요.</p>
+          <div id="voteTeacherMsg" class="muted" style="margin-top:6px; font-size:0.8rem; color:#b91c1c;"></div>
+        </div>
+        <div class="info-card">
+          <h3 style="margin:0 0 8px; font-size:0.95rem; font-weight:800; color:var(--primary);">득표 현황 <span id="voteTotalInfo" style="font-weight:600; color:var(--gray); font-size:0.8rem;"></span></h3>
+          <div id="voteRanking"></div>
+        </div>
+        <div class="info-card">
+          <h3 style="margin:0 0 8px; font-size:0.95rem; font-weight:800; color:var(--primary);">반별 참여 현황</h3>
+          <div id="voteClassStats"></div>
+          <button onclick="refreshVoteResults()" style="margin-top:10px; width:100%; padding:10px; border:1px solid var(--border); border-radius:10px; background:#fff; font-weight:700; cursor:pointer;">🔄 새로고침</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 5. 코스 안내 (조편성·코스순서·코스안내 시트 기반) -->
     <div id="tab-course" style="display:none;">
       <div class="info-card">
@@ -849,6 +893,7 @@
       if (d.courseConfig) courseConfig = { classToGroup: d.courseConfig.classToGroup || {}, groupCourses: d.courseConfig.groupCourses || {} };
       if (d.courseInfo) courseInfoItems = d.courseInfo;
       if (d.notices) classNotices = d.notices;
+      if (d.vote) { voteInfo = d.vote; updateVoteNav(); if (document.getElementById('tab-vote').style.display === 'block') renderVoteTab(false); }
       if (d.emergency) { emergencyItems = d.emergency; if (document.getElementById('tab-emergency').style.display === 'block') renderEmergencyTab(); }
 
       const cls = document.getElementById('studentClassSelect').value;
@@ -897,6 +942,7 @@
           const cls = document.getElementById('studentClassSelect').value;
           if (cls) renderClassNotice(cls);
         });
+        pollVoteInfo();
       }, 60000);
     };
 
@@ -1764,12 +1810,13 @@
       document.getElementById('studentSubNav').style.display = isTeacher ? '' : 'none';
       document.body.classList.toggle('teacher-on', !!isTeacher);
       // 교사 모드: 방배치도·비상연락망·공지 문구를 앞에, 여행 준비·코스 안내를 맨 뒤로
-      ['navBtnAssembly','navBtnRollcall','navBtnContacts','navBtnNotice','navBtnEmergency','navBtnCourse','navBtnPrep'].forEach(function(id, i) {
+      ['navBtnAssembly','navBtnRollcall','navBtnContacts','navBtnNotice','navBtnVote','navBtnEmergency','navBtnCourse','navBtnPrep'].forEach(function(id, i) {
         document.getElementById(id).style.order = isTeacher ? i : '';
       });
       document.getElementById('navBtnContacts').style.display = isTeacher ? '' : 'none';
       document.getElementById('navBtnNotice').style.display = isTeacher ? '' : 'none';
       document.getElementById('headerTeacherDoc').style.display = isTeacher ? 'inline-block' : 'none';
+      updateVoteNav();
     }
 
     // 입구가 둘: 왼쪽 교표 = 교사, 오른쪽 교표 = 스캔 도우미. 각 입구에서는 자기 PIN만 통과합니다.
@@ -1889,6 +1936,7 @@
         // 이 기기에 PIN을 기억해둬서, 다음부터는(특히 교사 전용 링크로 들어올 때) 다시 안 물어봅니다.
         try { localStorage.setItem(TEACHER_PIN_STORAGE_KEY, pin); } catch (e) {}
 
+        teacherPinValue = pin;
         isTeacher = true;
         document.getElementById('lockStatusBadge').innerText = "🔓 명단 불러오는 중...";
         updateTeacherOnlyNavVisibility();
@@ -2292,7 +2340,9 @@
       document.getElementById('tab-prep').style.display = 'none';
       document.getElementById('tab-course').style.display = 'none';
       document.getElementById('tab-emergency').style.display = 'none';
+      document.getElementById('tab-vote').style.display = 'none';
       document.getElementById('tab-notice').style.display = 'none';
+      stopVoteTimer();
     }
 
     function openInfoTab(tabKey) {
@@ -2310,6 +2360,10 @@
         document.getElementById('navBtnPrep').classList.add('active');
         document.getElementById('tab-prep').style.display = 'block';
         renderPrepChecklist();
+      } else if (tabKey === 'tab-vote') {
+        document.getElementById('navBtnVote').classList.add('active');
+        document.getElementById('tab-vote').style.display = 'block';
+        renderVoteTab(true);
       } else if (tabKey === 'tab-emergency') {
         document.getElementById('navBtnEmergency').classList.add('active');
         document.getElementById('tab-emergency').style.display = 'block';
@@ -2319,6 +2373,170 @@
         document.getElementById('tab-course').style.display = 'block';
         renderCourseTab();
       }
+    }
+
+    // ── 장기자랑 투표 ──
+    let voteInfo = null;            // { open, picks, targets:[{name,desc}] }
+    let teacherPinValue = '';
+    let voteTimer = null;
+    const VOTE_ERR = { VOTE_CLOSED: '투표가 마감되었어요.', ALREADY_VOTED: '이미 투표한 학생이에요. (한 번만 투표할 수 있어요)', NOT_IN_ROSTER: '명단에서 이름을 찾지 못했어요. 선생님께 문의해 주세요.', BAD_PICKS: '팀을 정확히 2팀 골라 주세요.', NO_STUDENT: '반과 이름을 먼저 골라 주세요.', PIN_INVALID: '교사 인증이 필요해요.', UNKNOWN_ACTION: '서버(Code.gs)를 새 버전으로 배포해야 이 기능을 쓸 수 있어요.' };
+    function voteKeyOf(cls, name) { return 'suhak2026_voted_' + cls + '|' + name; }
+    function updateVoteNav() {
+      const btn = document.getElementById('navBtnVote');
+      if (!btn) return;
+      const show = !isScanOnly && (isTeacher || (voteInfo && voteInfo.open));
+      btn.style.display = show ? '' : 'none';
+      const tab = document.getElementById('tab-vote');
+      if (tab && tab.style.display === 'block' && !show) openInfoTab('tab-emergency');
+    }
+    function pollVoteInfo() {
+      if (isScanOnly) return Promise.resolve();
+      return callApi('getVoteInfo').then(function(res) {
+        if (res && !res.error) { voteInfo = res; updateVoteNav(); if (document.getElementById('tab-vote').style.display === 'block') renderVoteTab(false); }
+      }).catch(function() {});
+    }
+    function stopVoteTimer() { if (voteTimer) { clearInterval(voteTimer); voteTimer = null; } }
+    function renderVoteTab(first) {
+      document.getElementById('voteStudentBox').style.display = isTeacher ? 'none' : 'block';
+      document.getElementById('voteTeacherBox').style.display = isTeacher ? 'block' : 'none';
+      if (first) {
+        stopVoteTimer();
+        pollVoteInfo();
+        voteTimer = setInterval(function() { if (!document.hidden) { if (isTeacher) refreshVoteResults(); else pollVoteInfo(); } }, isTeacher ? 8000 : 20000);
+        if (isTeacher) refreshVoteResults();
+        else buildVoteStudentForm();
+      }
+      if (isTeacher) { renderVoteStatus(); return; }
+      const open = !!(voteInfo && voteInfo.open);
+      const closed = document.getElementById('voteClosedMsg');
+      closed.style.display = open ? 'none' : 'block';
+      closed.innerText = voteInfo ? '지금은 투표 시간이 아니에요. (아직 열리지 않았거나 마감됐어요)' : '투표 정보를 불러오는 중이에요…';
+      document.getElementById('voteForm').style.display = open ? 'block' : 'none';
+      if (open && !document.getElementById('voteList').innerHTML) renderVoteList();
+    }
+    function buildVoteStudentForm() {
+      const cs = document.getElementById('voteClassSelect');
+      const classes = Array.from(new Set(simpleStudents.map(function(s) { return s.gradeClass; })))
+        .sort(function(a, b) { return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0); });
+      const prevCls = cs.value || document.getElementById('studentClassSelect').value || '';
+      cs.innerHTML = '<option value="">-- 반 --</option>' + classes.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+      if (prevCls && classes.indexOf(prevCls) >= 0) cs.value = prevCls;
+      const prevName = document.getElementById('voteNameSelect').value || document.getElementById('studentNameSelect').value || '';
+      onVoteClassChange(prevName);
+    }
+    function onVoteClassChange(keepName) {
+      const cls = document.getElementById('voteClassSelect').value;
+      const ns = document.getElementById('voteNameSelect');
+      const list = simpleStudents.filter(function(s) { return s.gradeClass === cls; }).sort(function(a, b) { return a.num - b.num; });
+      ns.innerHTML = '<option value="">' + (cls ? '-- 이름 --' : '반을 먼저 선택하세요') + '</option>' + list.map(function(s) { return '<option value="' + s.name + '">' + s.num + '번 ' + s.name + '</option>'; }).join('');
+      if (typeof keepName === 'string' && keepName && list.some(function(s) { return s.name === keepName; })) ns.value = keepName;
+      onVoteNameChange();
+    }
+    function onVoteNameChange() {
+      const cls = document.getElementById('voteClassSelect').value, name = document.getElementById('voteNameSelect').value;
+      let done = false;
+      try { done = !!(cls && name && localStorage.getItem(voteKeyOf(cls, name))); } catch (e) {}
+      document.getElementById('voteDoneMsg').style.display = done ? 'block' : 'none';
+      document.getElementById('voteBallot').style.display = done ? 'none' : 'block';
+      if (!done) renderVoteList(true);
+      updateVoteSubmit();
+    }
+    function renderVoteList(reset) {
+      const box = document.getElementById('voteList');
+      const targets = (voteInfo && voteInfo.targets) || [];
+      if (!targets.length) { box.innerHTML = '<div class="muted" style="padding:8px 0;">투표 대상이 아직 등록되지 않았어요.</div>'; return; }
+      const checked = reset ? [] : Array.from(box.querySelectorAll('input:checked')).map(function(i) { return i.value; });
+      box.innerHTML = targets.map(function(t, i) {
+        return '<label style="display:flex; align-items:center; gap:10px; padding:12px; margin-bottom:6px; border:1px solid var(--border); border-radius:10px; background:#fff; cursor:pointer;">' +
+          '<input type="checkbox" value="' + escEmg(t.name) + '" style="width:20px; height:20px;" onchange="onVoteCheck()"' + (checked.indexOf(t.name) >= 0 ? ' checked' : '') + '>' +
+          '<span style="flex:1;"><b>' + escEmg(t.name) + '</b>' + (t.desc ? '<br><span class="muted" style="font-size:0.78rem;">' + escEmg(t.desc) + '</span>' : '') + '</span></label>';
+      }).join('');
+      onVoteCheck();
+    }
+    function onVoteCheck() {
+      const boxes = Array.from(document.querySelectorAll('#voteList input'));
+      const n = boxes.filter(function(b) { return b.checked; }).length;
+      const max = (voteInfo && voteInfo.picks) || 2;
+      boxes.forEach(function(b) { b.disabled = !b.checked && n >= max; b.parentNode.style.opacity = b.disabled ? '0.5' : '1'; b.parentNode.style.borderColor = b.checked ? 'var(--primary)' : ''; });
+      document.getElementById('voteCount').innerText = String(n);
+      updateVoteSubmit();
+    }
+    function updateVoteSubmit() {
+      const n = document.querySelectorAll('#voteList input:checked').length;
+      const max = (voteInfo && voteInfo.picks) || 2;
+      const ok = n === max && document.getElementById('voteClassSelect').value && document.getElementById('voteNameSelect').value && voteInfo && voteInfo.open;
+      document.getElementById('voteSubmitBtn').disabled = !ok;
+    }
+    function submitVoteClick() {
+      const cls = document.getElementById('voteClassSelect').value, name = document.getElementById('voteNameSelect').value;
+      const picks = Array.from(document.querySelectorAll('#voteList input:checked')).map(function(i) { return i.value; });
+      if (!cls || !name || picks.length !== 2) return;
+      if (!confirm(cls + ' ' + name + ' 학생\n선택: ' + picks.join(', ') + '\n\n제출하면 수정할 수 없어요. 투표할까요?')) return;
+      const btn = document.getElementById('voteSubmitBtn'); btn.disabled = true; btn.innerText = '제출 중…';
+      callApi('submitVote', { gradeClass: cls, name: name, picks: picks }).then(function(res) {
+        btn.innerText = '투표 제출하기';
+        if (res && res.success) {
+          try { localStorage.setItem(voteKeyOf(cls, name), '1'); } catch (e) {}
+          onVoteNameChange();
+        } else {
+          if (res && res.error === 'ALREADY_VOTED') { try { localStorage.setItem(voteKeyOf(cls, name), '1'); } catch (e) {} onVoteNameChange(); }
+          alert(VOTE_ERR[res && res.error] || ('투표 실패: ' + (res && res.error)));
+          updateVoteSubmit();
+        }
+      }).catch(function() { btn.innerText = '투표 제출하기'; alert('전송에 실패했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.'); updateVoteSubmit(); });
+    }
+    // 교사: 열기/마감 + 결과
+    function renderVoteStatus() {
+      const open = !!(voteInfo && voteInfo.open);
+      const b = document.getElementById('voteStatusBadge');
+      b.innerText = voteInfo ? (open ? '🟢 투표 진행 중' : '⚪ 투표 닫힘') : '상태 확인 중…';
+      b.style.background = open ? '#dcfce7' : '#e2e8f0'; b.style.color = open ? '#166534' : '#475569';
+      const t = document.getElementById('voteToggleBtn');
+      t.disabled = !voteInfo; t.innerText = open ? '투표 마감하기' : '투표 열기';
+      t.style.background = open ? '#dc2626' : 'var(--primary)';
+    }
+    function toggleVoteOpen() {
+      const open = !(voteInfo && voteInfo.open);
+      if (!confirm(open ? '투표를 열까요?\n학생 화면에 \'장기자랑 투표\' 탭이 나타나요.' : '투표를 마감할까요?\n학생 화면에서 탭이 사라지고 더 이상 투표할 수 없어요.')) return;
+      callApi('setVoteOpen', { pin: teacherPinValue, open: open }).then(function(res) {
+        if (res && res.error) { document.getElementById('voteTeacherMsg').innerText = VOTE_ERR[res.error] || res.error; return; }
+        document.getElementById('voteTeacherMsg').innerText = '';
+        voteInfo = Object.assign({}, voteInfo || {}, { open: !!res.open }); renderVoteStatus(); refreshVoteResults();
+      }).catch(function() { document.getElementById('voteTeacherMsg').innerText = '요청에 실패했어요. 인터넷 연결을 확인해 주세요.'; });
+    }
+    function refreshVoteResults() {
+      if (!isTeacher) return;
+      callApi('getVoteResults', { pin: teacherPinValue }).then(function(res) {
+        if (!res || res.error) { document.getElementById('voteTeacherMsg').innerText = VOTE_ERR[res && res.error] || '결과를 불러오지 못했어요.'; return; }
+        document.getElementById('voteTeacherMsg').innerText = '';
+        voteInfo = Object.assign({}, voteInfo || {}, { open: res.open, picks: res.picks }); renderVoteStatus(); renderVoteResults(res);
+      }).catch(function() {});
+    }
+    function renderVoteResults(res) {
+      const items = res.items.slice().sort(function(a, b) { return b.count - a.count; });
+      const max = Math.max.apply(null, items.map(function(i) { return i.count; }).concat([1]));
+      let rank = 0, last = null, shown = 0;
+      document.getElementById('voteTotalInfo').innerText = '· 투표 ' + res.totalVoted + '명 / 전체 ' + res.totalStudents + '명';
+      document.getElementById('voteRanking').innerHTML = items.length ? items.map(function(i) {
+        shown++; if (i.count !== last) { rank = shown; last = i.count; }
+        const pct = Math.round(i.count / max * 100);
+        return '<div style="margin-bottom:9px;"><div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:3px;"><span><b>' + rank + '위</b> ' + escEmg(i.name) + (i.inList ? '' : ' <span class="muted">(목록에서 삭제됨)</span>') + '</span><b>' + i.count + '표</b></div><div style="height:12px; background:#e2e8f0; border-radius:99px; overflow:hidden;"><div style="height:100%; width:' + pct + '%; background:' + (rank === 1 ? '#f59e0b' : 'var(--primary)') + ';"></div></div></div>';
+      }).join('') : '<div class="muted">투표 대상이 아직 없어요. 시트 \'투표대상\'을 확인하세요.</div>';
+      document.getElementById('voteClassStats').innerHTML = res.classes.map(function(c) {
+        const pct = c.total ? Math.round(c.voted / c.total * 100) : 0;
+        const voters = c.voters.map(function(n) { return '<span style="display:inline-flex; align-items:center; gap:3px; margin:2px 4px 2px 0; padding:2px 6px; background:#dcfce7; border-radius:99px; font-size:0.78rem;">' + escEmg(n) + ' <a href="#" onclick="cancelVoteClick(\'' + c.gradeClass + '\',\'' + String(n).replace(/'/g, '') + '\'); return false;" style="color:#b91c1c; text-decoration:none; font-weight:800;" title="이 학생 투표 취소">✕</a></span>'; }).join('');
+        const non = c.nonVoters.map(function(n) { return '<span style="display:inline-block; margin:2px 4px 2px 0; padding:2px 6px; background:#fef3c7; border-radius:99px; font-size:0.78rem;">' + escEmg(n) + '</span>'; }).join('');
+        return '<details style="border-top:1px solid var(--border); padding:8px 0;"><summary style="cursor:pointer; display:flex; justify-content:space-between; font-size:0.9rem;"><b>' + c.gradeClass + '</b><span>' + c.voted + ' / ' + c.total + '명 (' + pct + '%)</span></summary>' +
+          '<div style="margin-top:6px; font-size:0.78rem; color:var(--gray);">투표함 (✕ = 투표 취소해서 다시 하게 하기)</div><div>' + (voters || '<span class="muted">없음</span>') + '</div>' +
+          '<div style="margin-top:6px; font-size:0.78rem; color:var(--gray);">아직 안 함</div><div>' + (non || '<span class="muted">없음</span>') + '</div></details>';
+      }).join('');
+    }
+    function cancelVoteClick(cls, name) {
+      if (!confirm(cls + ' ' + name + ' 학생의 투표를 취소할까요?\n(그 학생은 다시 투표할 수 있어요)')) return;
+      callApi('cancelVote', { pin: teacherPinValue, gradeClass: cls, name: name }).then(function() {
+        try { localStorage.removeItem(voteKeyOf(cls, name)); } catch (e) {}
+        refreshVoteResults();
+      }).catch(function() { alert('취소 요청에 실패했어요.'); });
     }
 
     // ── 긴급연락처 ──
