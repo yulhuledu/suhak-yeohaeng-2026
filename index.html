@@ -653,12 +653,30 @@
     <div id="tab-notice" style="display:none;">
       <div class="info-card">
         <h2>📢 반 공지 문구 만들기</h2>
-        <p class="muted">코스를 고르고 시간을 적으면 반공지 형식의 문구가 만들어져요. 아래 미리보기는 직접 고쳐도 되고, [복사] 버튼으로 바로 붙여넣을 수 있어요.</p>
-        <div style="margin-top:10px;">
+        <div style="display:flex; gap:6px; margin-bottom:10px;">
+          <button type="button" id="noticeModeStu" onclick="setNoticeMode('stu')" style="flex:1; padding:9px; border-radius:10px; border:1px solid var(--primary); background:var(--primary); color:#fff; font-weight:800; cursor:pointer;">📢 학생 반공지</button>
+          <button type="button" id="noticeModePar" onclick="setNoticeMode('par')" style="flex:1; padding:9px; border-radius:10px; border:1px solid var(--border); background:#fff; color:var(--text); font-weight:800; cursor:pointer;">💌 학부모 문자</button>
+        </div>
+        <p class="muted" id="noticeHelp">코스를 고르고 시간을 적으면 반공지 형식의 문구가 만들어져요. 아래 미리보기는 직접 고쳐도 되고, [복사] 버튼으로 바로 붙여넣을 수 있어요.</p>
+        <div id="noticeParentBox" style="display:none; margin-top:10px;">
+          <label style="display:block; margin-bottom:4px; font-size:0.78rem; color:var(--gray);">문자 종류</label>
+          <select class="control-select" id="parentMsgSelect" style="width:100%;" onchange="buildParentMsg()"></select>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <div style="flex:1;">
+              <label style="display:block; margin-bottom:4px; font-size:0.78rem; color:var(--gray);">우리 반</label>
+              <select class="control-select" id="parentClassSelect" style="width:100%;" onchange="onParentClassChange()"></select>
+            </div>
+            <div style="flex:1;" id="parentTimeBox">
+              <label style="display:block; margin-bottom:4px; font-size:0.78rem; color:var(--gray);">학교 도착 예정 시각</label>
+              <input type="text" id="parentTimeInput" class="control-select" style="width:100%; font-weight:600;" value="22:00경" oninput="buildParentMsg()">
+            </div>
+          </div>
+        </div>
+        <div id="noticeStuBox" style="margin-top:10px;">
           <label style="display:block; margin-bottom:4px; font-size:0.78rem; color:var(--gray);">코스</label>
           <select class="control-select" id="noticeCourseSelect" style="width:100%;" onchange="onNoticeCourseChange()"></select>
         </div>
-        <div style="display:flex; gap:8px; margin-top:10px;">
+        <div id="noticeTimesBox" style="display:flex; gap:8px; margin-top:10px;">
           <div style="flex:1;">
             <label id="noticeDurLabel" style="display:block; margin-bottom:4px; font-size:0.78rem; color:var(--gray);">예상활동시간</label>
             <input type="text" id="noticeDurInput" class="control-select" style="width:100%; font-weight:600;" placeholder="예: 약 40분" oninput="buildNotice()">
@@ -763,6 +781,70 @@
       });
     }
 
+
+    // ── 체크 모아 보내기 (QR 스캔용) ─────────────────────────────────────────
+    // 스캔할 때마다 서버에 한 건씩 보내면 연속 스캔 때 서버가 줄을 서서 저장이 한참 밀립니다.
+    // 화면·소리는 즉시 반응하고, 체크는 폰에 먼저 저장해 두었다가 2초마다 모아서 한 번에 보냅니다.
+    // 실패하면 폰에 남겨 두고 자동으로 다시 보내며, 앱을 닫았다 다시 열어도 이어서 보냅니다.
+    const CHECKQ_KEY = 'suhak2026_checkq_v1';
+    let checkQ = [];
+    try { checkQ = JSON.parse(localStorage.getItem(CHECKQ_KEY) || '[]'); } catch (e) { checkQ = []; }
+    let checkQTimer = null, checkQSending = false, checkQFails = 0, batchUnsupported = false;
+    function saveCheckQ() { try { localStorage.setItem(CHECKQ_KEY, JSON.stringify(checkQ)); } catch (e) {} }
+    function enqueueCheck(item) {
+      item.qid = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+      checkQ.push(item); saveCheckQ(); scheduleFlush(2000);
+    }
+    function pendingIdsFor(ev) {
+      return checkQ.filter(function(x) { return x.eventType === ev; }).map(function(x) { return x.gradeClass + '|' + x.name; });
+    }
+    function scheduleFlush(ms) {
+      if (checkQTimer) return;
+      checkQTimer = setTimeout(function() { checkQTimer = null; flushCheckQ(); }, ms);
+    }
+    function notifyCheckQFail() {
+      if (checkQFails < 3 || !checkQ.length) return;
+      const m = '전송 대기 ' + checkQ.length + '건 · 자동으로 다시 보내는 중';
+      try {
+        if (isScanOnly) setScanResult('err', '⚠️ 전송이 늦어지고 있어요', '인터넷을 확인해 주세요 (' + m + ')');
+        else showScanToast('⚠️ ' + m + ' · 인터넷을 확인해 주세요', 'err');
+      } catch (e) {}
+    }
+    function flushCheckQ() {
+      if (checkQSending || !checkQ.length) return;
+      checkQSending = true;
+      const batch = checkQ.slice(0, 40);
+      const finish = function() {
+        const ids = {}; batch.forEach(function(b) { ids[b.qid] = true; });
+        checkQ = checkQ.filter(function(x) { return !ids[x.qid]; });
+        saveCheckQ(); checkQSending = false; checkQFails = 0;
+        if (checkQ.length) scheduleFlush(300);
+      };
+      const fail = function() {
+        checkQSending = false; checkQFails++; notifyCheckQFail();
+        scheduleFlush(Math.min(20000, 2000 * Math.pow(2, Math.min(checkQFails - 1, 4))) + Math.random() * 1500);
+      };
+      const singles = function() {   // 예전 서버(모아 보내기 미지원)용: 한 건씩 차례로
+        return batch.reduce(function(p, it) {
+          return p.then(function() {
+            return callApi('checkStudent', { gradeClass: it.gradeClass, name: it.name, room: it.room || '', eventType: it.eventType, by: it.by })
+              .then(function(r) { if (r && r.error) throw new Error(r.error); });
+          });
+        }, Promise.resolve());
+      };
+      const run = batchUnsupported ? singles() : callApi('checkStudents', { items: batch }).then(function(res) {
+        if (res && res.error === 'UNKNOWN_ACTION') { batchUnsupported = true; return singles(); }
+        if (!res || res.error || !res.success) throw new Error((res && res.error) || 'FAIL');
+      });
+      run.then(finish).catch(fail);
+    }
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden && checkQ.length) { if (checkQTimer) { clearTimeout(checkQTimer); checkQTimer = null; } flushCheckQ(); }
+    });
+    window.addEventListener('pagehide', function() { if (checkQ.length && !checkQSending) flushCheckQ(); });
+    window.addEventListener('online', function() { if (checkQ.length) scheduleFlush(300); });
+    if (checkQ.length) scheduleFlush(1500);
+
     let isTeacher = false;
     let isScanOnly = false;
     let simpleStudents = [];
@@ -772,7 +854,7 @@
     let targetTabAfterAuth = '';
 
     // 반-조 매핑 + 조별 코스 순서 (구글 시트 '조편성'/'코스순서' 탭에서 로드)
-    let courseConfig = { classToGroup: {}, groupCourses: {} };
+    let courseConfig = { classToGroup: {}, groupCourses: {}, guideCourses: {} };
     let currentGroupFilter = '전체';
 
     const DEFAULT_EVENT_TYPES = ['🌅 조회', '🌇 종례'];
@@ -881,7 +963,7 @@
         return Promise.all([
           callApi('getStudentSimpleData'), callApi('getCourseConfig'), callApi('getCourseInfo'), callApi('getClassNotices')
         ]).then(function(r) {
-          return { students: r[0].students || [], courseConfig: { classToGroup: r[1].classToGroup || {}, groupCourses: r[1].groupCourses || {} },
+          return { students: r[0].students || [], courseConfig: { classToGroup: r[1].classToGroup || {}, groupCourses: r[1].groupCourses || {}, guideCourses: r[1].guideCourses || {} },
                    courseInfo: r[2].items || [], notices: r[3].notices || {} };
         });
       });
@@ -889,7 +971,7 @@
 
     function applyInitData(d) {
       if (d.students) simpleStudents = d.students;
-      if (d.courseConfig) courseConfig = { classToGroup: d.courseConfig.classToGroup || {}, groupCourses: d.courseConfig.groupCourses || {} };
+      if (d.courseConfig) courseConfig = { classToGroup: d.courseConfig.classToGroup || {}, groupCourses: d.courseConfig.groupCourses || {}, guideCourses: d.courseConfig.guideCourses || {} };
       if (d.courseInfo) courseInfoItems = d.courseInfo;
       if (d.notices) classNotices = d.notices;
       if (d.vote) { voteInfo = d.vote; updateVoteNav(); if (document.getElementById('tab-vote').style.display === 'block') renderVoteTab(false); }
@@ -1696,20 +1778,12 @@
         const evType = document.getElementById('teacherEventTypeSelect').value;
         showScanToast(`✅ [${targetStudent.gradeClass} ${targetStudent.name}] ${evType} 확인!`);
 
-        callApi('checkStudent', {
+        enqueueCheck({
           gradeClass: targetStudent.gradeClass,
           name: targetStudent.name,
           room: targetStudent.room,
           eventType: evType,
           by: '교사QR스캔'
-        }).then(function(res) {
-          if (res && res.error) throw new Error(res.error);
-        }).catch(function(err) {
-          console.error('체크인 기록 실패:', err);
-          targetStudent.checkedAssembly = false;   // 서버에 저장되지 않았으니 화면에서도 되돌림
-          playErr();
-          showScanToast('⚠️ 전송 실패 – 인터넷을 확인하고 다시 찍어 주세요', 'err');
-          renderAssemblyTeacher();
         });
 
         renderAssemblyTeacher();
@@ -1798,6 +1872,7 @@
 
       callApi('getAssemblyStatus', { eventType: evType }).then(function(res) {
         const checkedSet = new Set(res.checked || []);
+        pendingIdsFor(evType).forEach(function(id) { checkedSet.add(id); });   // 아직 서버로 못 보낸 스캔도 체크로 유지
         fullStudents.forEach(s => {
           s.checkedAssembly = checkedSet.has(s.gradeClass + '|' + s.name);
         });
@@ -2155,15 +2230,7 @@
       playBeep();
       setScanResult('ok', '✓ 체크 완료', label);
       updateScanCount();
-      callApi('checkStudent', { gradeClass: stu.gradeClass, name: stu.name, room: '', eventType: ev, by: '학생도우미QR' })
-        .then(function(res) { if (res && res.error) throw new Error(res.error); })
-        .catch(function(err) {
-          console.error('체크인 기록 실패:', err);
-          scanLocal.delete(key);
-          updateScanCount();
-          playErr();
-          setScanResult('err', '✖ 전송 실패', '인터넷을 확인하고 다시 찍어 주세요 (' + label + ')');
-        });
+      enqueueCheck({ gradeClass: stu.gradeClass, name: stu.name, room: '', eventType: ev, by: '학생도우미QR' });
     }
 
     function exitScanMode() {
@@ -2320,6 +2387,7 @@
         }).join('');
         noticeInited = true;
       }
+      if (noticeMode === 'par') { setNoticeMode('par'); return; }
       onNoticeCourseChange();
     }
 
@@ -2354,10 +2422,73 @@
       document.getElementById('noticeCopyMsg').innerText = '';
     }
 
+
+    // ── 학부모 문자 문구 (반 번호는 선택한 반으로 자동으로 채워져요) ──
+    const PARENT_MSGS = [
+      { label: '① 제주공항 도착 후', time: false, body: function() {
+        return '학생들이 제주공항에 안전하게 도착하여, 첫 체험 일정을 시작했습니다.\n이후 일정도 학생들의 안전을 최우선으로 지도하겠습니다.'; } },
+      { label: '② 1일차 종료 후', time: false, body: function() {
+        return '오늘 1일차 체험 일정을 학생들이 모두 안전하게 마치고, 현재 숙소에서 휴식을 취하고 있습니다.\n내일도 안전하게 지도하겠습니다.'; } },
+      { label: '③ 2일차 종료 후', time: true, body: function(t) {
+        return '오늘 2일차 체험 일정을 학생들이 모두 안전하게 마치고, 현재 숙소에서 휴식을 취하고 있습니다.\n\n'
+          + '내일은 마지막 일정을 마치고 귀가합니다. 학교 도착 예정 시각은 ' + t + '이며, 교통 상황에 따라 변동될 수 있습니다.\n'
+          + '학교 도착 시간이 늦고 학교 주변이 혼잡할 것으로 예상됩니다. 대중교통 이용이 불편하거나 차량으로 오시는 경우(주차 포함)에는 마지막 날에 자녀와 만날 장소와 방법을 조율해 주시기 바랍니다.'; } },
+      { label: '④ 3일차 김포공항 도착 후', time: true, body: function(t) {
+        return '학생들이 김포공항에 안전하게 도착하여, 현재 전용버스로 학교로 이동 중입니다.\n'
+          + '학교 도착 예정 시각은 ' + t + '이며, 교통 상황에 따라 변동될 수 있습니다.\n\n'
+          + '대중교통 이용이 불편한 지역의 학부모님들께서 한꺼번에 학교 주변으로 오시면 혼잡이 예상됩니다. 차량으로 오시는 경우 주차 문제도 있을 수 있으니, 자녀와 만날 장소와 방법을 조율해 주시고, 교통 안전에도 주의하여 주시기 바랍니다.'; } }
+    ];
+    let noticeMode = 'stu';
+    const PARENT_CLASS_KEY = 'suhak2026_parentClass';
+
+    function setNoticeMode(m) {
+      noticeMode = m;
+      const par = (m === 'par');
+      document.getElementById('noticeModeStu').style.cssText += par ? ';background:#fff;color:var(--text);border-color:var(--border)' : ';background:var(--primary);color:#fff;border-color:var(--primary)';
+      document.getElementById('noticeModePar').style.cssText += par ? ';background:var(--primary);color:#fff;border-color:var(--primary)' : ';background:#fff;color:var(--text);border-color:var(--border)';
+      document.getElementById('noticeStuBox').style.display = par ? 'none' : '';
+      document.getElementById('noticeTimesBox').style.display = par ? 'none' : 'flex';
+      document.getElementById('noticeParentBox').style.display = par ? 'block' : 'none';
+      document.getElementById('noticeHelp').innerText = par
+        ? '문자 종류를 고르고 반과 학교 도착 예정 시각을 확인하면 학부모 문자 문구가 만들어져요. 미리보기는 직접 고쳐도 되고, [복사] 버튼으로 바로 붙여넣을 수 있어요.'
+        : '코스를 고르고 시간을 적으면 반공지 형식의 문구가 만들어져요. 아래 미리보기는 직접 고쳐도 되고, [복사] 버튼으로 바로 붙여넣을 수 있어요.';
+      if (par) initParentMsg(); else buildNotice();
+    }
+    function initParentMsg() {
+      const sel = document.getElementById('parentMsgSelect');
+      if (!sel.options.length) {
+        sel.innerHTML = PARENT_MSGS.map(function(p, i) { return '<option value="' + i + '">' + p.label + '</option>'; }).join('');
+      }
+      const cs = document.getElementById('parentClassSelect');
+      if (!cs.options.length) {
+        let h = ''; for (let i = 1; i <= 10; i++) h += '<option value="' + i + '">2-' + i + '반</option>';
+        cs.innerHTML = h;
+        let saved = '';
+        try { saved = localStorage.getItem(PARENT_CLASS_KEY) || ''; } catch (e) {}
+        const cur = parseInt(String(saved || currentClass || '').replace(/[^0-9]/g, ''), 10);
+        cs.value = String(cur >= 1 && cur <= 10 ? cur : 1);
+      }
+      buildParentMsg();
+    }
+    function onParentClassChange() {
+      try { localStorage.setItem(PARENT_CLASS_KEY, document.getElementById('parentClassSelect').value); } catch (e) {}
+      buildParentMsg();
+    }
+    function buildParentMsg() {
+      const p = PARENT_MSGS[Number(document.getElementById('parentMsgSelect').value) || 0];
+      const cls = document.getElementById('parentClassSelect').value || '○';
+      const tInput = document.getElementById('parentTimeInput');
+      document.getElementById('parentTimeBox').style.display = p.time ? '' : 'none';
+      const t = (tInput.value || '').trim() || '○○:○○경';
+      const text = '[2학년 수학여행 안내]\n안녕하세요, 2-' + cls + '반 담임입니다.\n' + p.body(t);
+      document.getElementById('noticePreview').value = text;
+      document.getElementById('noticeCopyMsg').innerText = '';
+    }
+
     function copyNotice() {
       const ta = document.getElementById('noticePreview');
       const msg = document.getElementById('noticeCopyMsg');
-      const done = function() { msg.innerText = '✅ 복사했어요. 반공지에 붙여넣으세요.'; };
+      const done = function() { msg.innerText = noticeMode === 'par' ? '✅ 복사했어요. 문자 앱에 붙여넣으세요.' : '✅ 복사했어요. 반공지에 붙여넣으세요.'; };
       const fallback = function() {
         try { ta.focus(); ta.select(); document.execCommand('copy'); done(); }
         catch (e) { msg.innerText = '복사에 실패했어요. 미리보기를 길게 눌러 직접 복사해주세요.'; }
@@ -2674,7 +2805,8 @@
       }
       // 조편성 시트에서 이 반이 속한 팀을 찾아 그 팀의 코스 일정을 그대로 보여줍니다(팀명은 따로 고르지 않아도 됨).
       const group = courseConfig.classToGroup[cls];
-      const courses = group ? (courseConfig.groupCourses[group] || []) : [];
+      // 코스 안내 탭은 체크인 일정과 별도로 '코스안내순서' 시트의 코스명(없으면 체크인 일정)을 보여줍니다.
+      const courses = group ? ((courseConfig.guideCourses && courseConfig.guideCourses[group]) || courseConfig.groupCourses[group] || []) : [];
       if (!courses.length) {
         body.innerHTML = '<h2>' + cls + ' 코스 안내</h2><p class="muted">' + (Object.keys(courseConfig.classToGroup || {}).length ? cls + ' 일정이 아직 등록되지 않았어요.' : '일정을 불러오는 중이에요...') + '</p>';
         return;
