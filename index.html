@@ -52,7 +52,7 @@
     .ev-empty { text-align: center; font-size: 0.85rem; font-weight: 700; color: #16a34a; padding: 12px 0; }
     .ev-row.selected { border-color: var(--primary); background: var(--primary); color: #fff; }
     header p { font-size: 0.8rem; opacity: 0.85; margin-top: 3px; }
-    .header-doc-link { display: inline-block; margin-top: 9px; padding: 6px 16px; border-radius: 999px; background: #fff; color: #2251a3; font-size: 0.82rem; font-weight: 800; text-decoration: none; }
+    .header-doc-link { display: inline-block; margin-top: 9px; margin-left: 4px; margin-right: 4px; padding: 6px 16px; border-radius: 999px; background: #fff; color: #2251a3; font-size: 0.82rem; font-weight: 800; text-decoration: none; }
     .pin-badge { position: absolute; right: 10px; top: 14px; max-width: 78px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 14px; font-size: 0.62rem; line-height: 1.3; padding: 5px 6px; cursor: pointer; color: #fff; text-align: center; white-space: normal; word-break: keep-all; }
 
     .top-nav { display: flex; gap: 6px; padding: 10px 12px; max-width: 600px; margin: 0 auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -289,6 +289,7 @@
     <p>체크인 · 여행 준비 · 코스 안내</p>
     <div class="pin-badge" id="lockStatusBadge" onclick="handleLockClick()">🔒 교사 로그인</div>
     <a id="headerTeacherDoc" class="header-doc-link" style="display:none;" href="https://drive.google.com/file/d/1KnPN-wNDQk-T2veh8PlcgpMf5CVgf_pS/view?usp=sharing" target="_blank" rel="noopener">📄 인솔교사용 자료</a>
+    <a id="headerAbsentDoc" class="header-doc-link" style="display:none;" href="https://docs.google.com/spreadsheets/d/1KxEA5vgOAlg4RMuNgwGA6vfEhVHInWbriPNeCYYfOvs/edit?usp=sharing" target="_blank" rel="noopener">📋 미참여 학생 등하교 체크</a>
   </header>
 
   <div class="top-nav">
@@ -1934,6 +1935,7 @@
       document.getElementById('navBtnContacts').style.display = isTeacher ? '' : 'none';
       document.getElementById('navBtnNotice').style.display = isTeacher ? '' : 'none';
       document.getElementById('headerTeacherDoc').style.display = isTeacher ? 'inline-block' : 'none';
+      document.getElementById('headerAbsentDoc').style.display = isTeacher ? 'inline-block' : 'none';
       updateVoteNav();
     }
 
@@ -2116,6 +2118,7 @@
       const nav = document.querySelector('.top-nav'); if (nav) nav.style.display = 'none';
       document.getElementById('globalClassChips').style.display = 'none';
       document.getElementById('headerTeacherDoc').style.display = 'none';
+      document.getElementById('headerAbsentDoc').style.display = 'none';
       document.getElementById('lockStatusBadge').innerText = '📷 스캔 도우미 (끝내기)';
       document.getElementById('view-scan-only').style.display = 'block';
       // 기존 스캐너(카메라 선택·삑 소리 포함)를 그대로 이 화면으로 옮겨 사용
