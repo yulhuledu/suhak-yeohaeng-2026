@@ -600,6 +600,15 @@
             <span id="voteStatusBadge" style="padding:6px 12px; border-radius:99px; font-weight:800; font-size:0.85rem; background:#e2e8f0; color:#475569;">상태 확인 중…</span>
             <button id="voteToggleBtn" onclick="toggleVoteOpen()" style="flex:1; padding:11px; border:none; border-radius:10px; background:var(--primary); color:#fff; font-weight:800; cursor:pointer;" disabled>투표 열기</button>
           </div>
+          <div style="margin-top:12px; padding-top:10px; border-top:1px dashed var(--border);">
+            <div style="font-size:0.85rem; font-weight:800; color:var(--primary);">반별로 열고 닫기 <span class="muted" style="font-weight:600; font-size:0.75rem;">(한꺼번에 몰리면 느려질 수 있어요)</span></div>
+            <div id="voteClassChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"><span class="muted" style="font-size:0.8rem;">반 목록을 불러오는 중…</span></div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button onclick="setVoteClassesClick(true)" style="flex:1; padding:10px; border:none; border-radius:10px; background:#16a34a; color:#fff; font-weight:800; cursor:pointer;">선택한 반 열기</button>
+              <button onclick="setVoteClassesClick(false)" style="flex:1; padding:10px; border:none; border-radius:10px; background:#dc2626; color:#fff; font-weight:800; cursor:pointer;">선택한 반 닫기</button>
+            </div>
+            <div style="margin-top:6px;"><a href="#" onclick="selectAllVoteChips(); return false;" style="font-size:0.78rem; color:var(--primary); font-weight:700;">전체 선택/해제</a></div>
+          </div>
           <p class="muted" style="margin-top:8px; font-size:0.78rem;">투표를 열면 학생 화면 맨 위 메뉴에 '🗳️ 장기자랑 투표' 탭이 나타나고, 마감하면 사라져요. 투표 대상은 구글 시트 <b>'투표대상'</b>에 적어요.</p>
           <div id="voteTeacherMsg" class="muted" style="margin-top:6px; font-size:0.8rem; color:#b91c1c;"></div>
         </div>
@@ -2544,8 +2553,14 @@
     let voteInfo = null;            // { open, picks, targets:[{name,desc}] }
     let teacherPinValue = '';
     let voteTimer = null;
-    const VOTE_ERR = { VOTE_CLOSED: '투표가 마감되었어요.', ALREADY_VOTED: '이미 투표한 학생이에요. (한 번만 투표할 수 있어요)', NOT_IN_ROSTER: '명단에서 이름을 찾지 못했어요. 선생님께 문의해 주세요.', BAD_PICKS: '팀을 정확히 2팀 골라 주세요.', NO_STUDENT: '반과 이름을 먼저 골라 주세요.', PIN_INVALID: '교사 인증이 필요해요.', UNKNOWN_ACTION: '서버(Code.gs)를 새 버전으로 배포해야 이 기능을 쓸 수 있어요.' };
+    const VOTE_ERR = { VOTE_CLOSED: '투표가 마감되었어요.', CLASS_CLOSED: '아직 우리 반 투표 시간이 아니에요. 선생님 안내를 기다려 주세요.', BAD_CLASSES: '반을 선택해 주세요.', ALREADY_VOTED: '이미 투표한 학생이에요. (한 번만 투표할 수 있어요)', NOT_IN_ROSTER: '명단에서 이름을 찾지 못했어요. 선생님께 문의해 주세요.', BAD_PICKS: '팀을 정확히 2팀 골라 주세요.', NO_STUDENT: '반과 이름을 먼저 골라 주세요.', PIN_INVALID: '교사 인증이 필요해요.', UNKNOWN_ACTION: '서버(Code.gs)를 새 버전으로 배포해야 이 기능을 쓸 수 있어요.' };
     function voteKeyOf(cls, name) { return 'suhak2026_voted_' + ((voteInfo && voteInfo.epoch) || '0') + '_' + cls + '|' + name; }
+    function voteOpenForClass(cls) {
+      if (!voteInfo || !voteInfo.open) return false;
+      if (voteInfo.all) return true;
+      if (!cls) return true; // 반을 아직 안 골랐으면 일단 폼을 보여줌
+      return (voteInfo.openClasses || []).indexOf(cls) >= 0;
+    }
     function updateVoteNav() {
       const btn = document.getElementById('navBtnVote');
       if (!btn) return;
@@ -2572,12 +2587,16 @@
         else buildVoteStudentForm();
       }
       if (isTeacher) { renderVoteStatus(); return; }
-      const open = !!(voteInfo && voteInfo.open);
+      const anyOpen = !!(voteInfo && voteInfo.open);
+      const myCls = document.getElementById('voteClassSelect').value;
+      const classOk = voteOpenForClass(myCls);
       const closed = document.getElementById('voteClosedMsg');
-      closed.style.display = open ? 'none' : 'block';
-      closed.innerText = voteInfo ? '지금은 투표 시간이 아니에요. (아직 열리지 않았거나 마감됐어요)' : '투표 정보를 불러오는 중이에요…';
-      document.getElementById('voteForm').style.display = open ? 'block' : 'none';
-      if (open && !document.getElementById('voteList').innerHTML) renderVoteList();
+      closed.style.display = (!anyOpen || !classOk) ? 'block' : 'none';
+      closed.innerText = !voteInfo ? '투표 정보를 불러오는 중이에요…'
+        : (!anyOpen ? '지금은 투표 시간이 아니에요. (아직 열리지 않았거나 마감됐어요)' : '아직 ' + myCls + ' 투표 시간이 아니에요. 선생님 안내를 기다려 주세요.');
+      document.getElementById('voteForm').style.display = anyOpen ? 'block' : 'none';
+      document.getElementById('voteBallot').style.display = (anyOpen && classOk && !voteDoneFor(myCls, document.getElementById('voteNameSelect').value)) ? 'block' : 'none';
+      if (anyOpen && !document.getElementById('voteList').innerHTML) renderVoteList();
     }
     function buildVoteStudentForm() {
       const cs = document.getElementById('voteClassSelect');
@@ -2597,12 +2616,20 @@
       if (typeof keepName === 'string' && keepName && list.some(function(s) { return s.name === keepName; })) ns.value = keepName;
       onVoteNameChange();
     }
+    function voteDoneFor(cls, name) {
+      try { return !!(cls && name && localStorage.getItem(voteKeyOf(cls, name))); } catch (e) { return false; }
+    }
     function onVoteNameChange() {
       const cls = document.getElementById('voteClassSelect').value, name = document.getElementById('voteNameSelect').value;
-      let done = false;
-      try { done = !!(cls && name && localStorage.getItem(voteKeyOf(cls, name))); } catch (e) {}
+      const done = voteDoneFor(cls, name);
+      const classOk = voteOpenForClass(cls);
+      const closed = document.getElementById('voteClosedMsg');
+      if (voteInfo && voteInfo.open) {
+        closed.style.display = classOk ? 'none' : 'block';
+        if (!classOk) closed.innerText = '아직 ' + cls + ' 투표 시간이 아니에요. 선생님 안내를 기다려 주세요.';
+      }
       document.getElementById('voteDoneMsg').style.display = done ? 'block' : 'none';
-      document.getElementById('voteBallot').style.display = done ? 'none' : 'block';
+      document.getElementById('voteBallot').style.display = (done || !classOk) ? 'none' : 'block';
       if (!done) renderVoteList(true);
       updateVoteSubmit();
     }
@@ -2629,7 +2656,7 @@
     function updateVoteSubmit() {
       const n = document.querySelectorAll('#voteList input:checked').length;
       const max = (voteInfo && voteInfo.picks) || 2;
-      const ok = n === max && document.getElementById('voteClassSelect').value && document.getElementById('voteNameSelect').value && voteInfo && voteInfo.open;
+      const ok = n === max && document.getElementById('voteClassSelect').value && document.getElementById('voteNameSelect').value && voteOpenForClass(document.getElementById('voteClassSelect').value);
       document.getElementById('voteSubmitBtn').disabled = !ok;
     }
     function submitVoteClick() {
@@ -2654,19 +2681,50 @@
     function renderVoteStatus() {
       const open = !!(voteInfo && voteInfo.open);
       const b = document.getElementById('voteStatusBadge');
-      b.innerText = voteInfo ? (open ? '🟢 투표 진행 중' : '⚪ 투표 닫힘') : '상태 확인 중…';
+      const oc = (voteInfo && voteInfo.openClasses) || [];
+      b.innerText = voteInfo ? (open ? (voteInfo.all ? '🟢 전체 투표 진행 중' : '🟢 ' + oc.join('·') + ' 진행 중') : '⚪ 투표 닫힘') : '상태 확인 중…';
+      renderVoteChips();
       b.style.background = open ? '#dcfce7' : '#e2e8f0'; b.style.color = open ? '#166534' : '#475569';
       const t = document.getElementById('voteToggleBtn');
-      t.disabled = !voteInfo; t.innerText = open ? '투표 마감하기' : '투표 열기';
+      t.disabled = !voteInfo; t.innerText = (open && voteInfo.all) ? '전체 마감하기' : (open ? '전체 마감하기' : '전체 열기');
       t.style.background = open ? '#dc2626' : 'var(--primary)';
+    }
+    let voteClassNames = [];
+    let voteChipSel = {};
+    function renderVoteChips() {
+      const box = document.getElementById('voteClassChips');
+      if (!box || !voteClassNames.length) return;
+      const oc = (voteInfo && voteInfo.openClasses) || [];
+      box.innerHTML = voteClassNames.map(function(c, i) {
+        const isOpen = voteInfo && voteInfo.open && (voteInfo.all || oc.indexOf(c) >= 0);
+        const sel = !!voteChipSel[c];
+        return '<button type="button" onclick="toggleVoteChip(' + i + ')" style="padding:8px 12px; border-radius:99px; font-weight:800; cursor:pointer; border:2px solid ' + (sel ? 'var(--primary)' : 'var(--border)') + '; background:' + (isOpen ? '#dcfce7' : '#f1f5f9') + '; color:' + (isOpen ? '#166534' : '#475569') + ';">' + (sel ? '☑ ' : '☐ ') + escEmg(c) + (isOpen ? ' 🟢' : '') + '</button>';
+      }).join('');
+    }
+    function toggleVoteChip(i) { const c = voteClassNames[i]; voteChipSel[c] = !voteChipSel[c]; renderVoteChips(); }
+    function selectAllVoteChips() {
+      const allOn = voteClassNames.every(function(c) { return voteChipSel[c]; });
+      voteClassNames.forEach(function(c) { voteChipSel[c] = !allOn; });
+      renderVoteChips();
+    }
+    function setVoteClassesClick(open) {
+      const sel = voteClassNames.filter(function(c) { return voteChipSel[c]; });
+      if (!sel.length) { document.getElementById('voteTeacherMsg').innerText = '먼저 반을 선택해 주세요.'; return; }
+      if (!confirm(sel.join(', ') + ' 투표를 ' + (open ? '열까요?' : '닫을까요?'))) return;
+      callApi('setVoteClasses', { pin: teacherPinValue, classes: sel, open: open }).then(function(res) {
+        if (res && res.error) { document.getElementById('voteTeacherMsg').innerText = VOTE_ERR[res.error] || res.error; return; }
+        document.getElementById('voteTeacherMsg').innerText = '';
+        voteChipSel = {};
+        voteInfo = Object.assign({}, voteInfo || {}, { open: !!res.open, all: !!res.all, openClasses: res.openClasses || [] }); renderVoteStatus(); refreshVoteResults();
+      }).catch(function() { document.getElementById('voteTeacherMsg').innerText = '요청에 실패했어요. 인터넷 연결을 확인해 주세요.'; });
     }
     function toggleVoteOpen() {
       const open = !(voteInfo && voteInfo.open);
-      if (!confirm(open ? '투표를 열까요?\n학생 화면에 \'장기자랑 투표\' 탭이 나타나요.' : '투표를 마감할까요?\n학생 화면에서 탭이 사라지고 더 이상 투표할 수 없어요.')) return;
+      if (!confirm(open ? '전체 반 투표를 열까요?\n학생 화면에 \'장기자랑 투표\' 탭이 나타나요.' : '모든 반 투표를 마감할까요?\n학생 화면에서 탭이 사라지고 더 이상 투표할 수 없어요.')) return;
       callApi('setVoteOpen', { pin: teacherPinValue, open: open }).then(function(res) {
         if (res && res.error) { document.getElementById('voteTeacherMsg').innerText = VOTE_ERR[res.error] || res.error; return; }
         document.getElementById('voteTeacherMsg').innerText = '';
-        voteInfo = Object.assign({}, voteInfo || {}, { open: !!res.open }); renderVoteStatus(); refreshVoteResults();
+        voteInfo = Object.assign({}, voteInfo || {}, { open: !!res.open, all: !!res.all, openClasses: res.openClasses || [] }); renderVoteStatus(); refreshVoteResults();
       }).catch(function() { document.getElementById('voteTeacherMsg').innerText = '요청에 실패했어요. 인터넷 연결을 확인해 주세요.'; });
     }
     function refreshVoteResults() {
@@ -2674,7 +2732,7 @@
       callApi('getVoteResults', { pin: teacherPinValue }).then(function(res) {
         if (!res || res.error) { document.getElementById('voteTeacherMsg').innerText = VOTE_ERR[res && res.error] || '결과를 불러오지 못했어요.'; return; }
         document.getElementById('voteTeacherMsg').innerText = '';
-        voteInfo = Object.assign({}, voteInfo || {}, { open: res.open, picks: res.picks }); renderVoteStatus(); renderVoteResults(res);
+        voteInfo = Object.assign({}, voteInfo || {}, { open: res.open, all: !!res.all, openClasses: res.openClasses || [], picks: res.picks }); voteClassNames = (res.classes || []).map(function(c) { return c.gradeClass; }); renderVoteStatus(); renderVoteResults(res);
       }).catch(function() {});
     }
     function renderVoteResults(res) {
